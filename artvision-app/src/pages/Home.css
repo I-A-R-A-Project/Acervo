@@ -1,0 +1,33 @@
+.page-home{
+  min-height:100vh;
+  background: radial-gradient(ellipse at 50% -10%, #1C1F26, #0D0F13 60%);
+  color:#EDEAE0;
+  font-family:'Inter', sans-serif;
+  padding:56px 32px 80px;
+}
+.page-home .home-header{ max-width:900px; margin:0 auto 48px; text-align:center; }
+.page-home .home-header .eyebrow{ font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:rgba(237,234,224,0.5); }
+.page-home .home-header h1{ font-family:'Fraunces', serif; font-weight:800; font-size:clamp(32px,5vw,52px); margin:10px 0 12px; letter-spacing:-0.01em; }
+.page-home .home-header p{ font-size:15px; color:rgba(237,234,224,0.6); max-width:56ch; margin:0 auto; line-height:1.6; }
+
+.page-home .grid{
+  max-width:1100px; margin:0 auto;
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr));
+  gap:18px;
+}
+.page-home .tile{
+  display:block; text-decoration:none; color:#EDEAE0;
+  border-radius:10px; padding:22px 20px; position:relative; overflow:hidden;
+  border:1px solid rgba(255,255,255,0.08);
+  transition:transform 0.18s ease, box-shadow 0.18s ease;
+  min-height:150px;
+}
+.page-home .tile:hover, .page-home .tile:focus-visible{
+  transform:translateY(-4px);
+  box-shadow:0 14px 30px rgba(0,0,0,0.4);
+}
+.page-home .tile .name{ font-family:'Fraunces', serif; font-weight:700; font-size:21px; margin:0 0 6px; position:relative; z-index:1; }
+.page-home .tile .tag{ font-family:'IBM Plex Mono', monospace; font-size:11px; opacity:0.75; position:relative; z-index:1; }
+.page-home .tile .glow{ position:absolute; inset:0; opacity:0.85; z-index:0; }
+
+.page-home .footer-note{ max-width:900px; margin:56px auto 0; text-align:center; font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:rgba(237,234,224,0.4); line-height:1.7; }

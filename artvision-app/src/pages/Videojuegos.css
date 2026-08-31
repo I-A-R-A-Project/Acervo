@@ -1,0 +1,76 @@
+.page-videojuegos{
+  --navy:#0B0E1A; --navy-2:#12172B; --cyan:#4CE0D2; --magenta:#E14CC7; --plastic:#8A8FA3; --print:#D8E4F0; --ink:#0A0A0F; --focus:#4CE0D2;
+  min-height:100vh;
+  background: repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 3px),
+    radial-gradient(ellipse at 50% -10%, var(--navy-2), var(--navy) 60%);
+  color:var(--print); font-family:'Inter',sans-serif;
+}
+.page-videojuegos :focus-visible{outline:2px solid var(--focus); outline-offset:2px;}
+.page-videojuegos .app{display:grid; grid-template-columns:230px 1fr; grid-template-rows:70px 1fr; grid-template-areas:"top top" "side main"; min-height:100vh;}
+.page-videojuegos .topbar{grid-area:top; display:flex; align-items:center; justify-content:space-between; padding:0 26px; border-bottom:1px solid rgba(76,224,210,0.25); background:rgba(0,0,0,0.25);}
+.page-videojuegos .brand{display:flex; align-items:baseline; gap:12px;}
+.page-videojuegos .brand .back{ font-family:'IBM Plex Mono'; font-size:11px; color:rgba(216,228,240,0.5); text-decoration:none; margin-right:2px; }
+.page-videojuegos .brand .back:hover{ color:var(--cyan); }
+.page-videojuegos .brand .mark{font-family:'Press Start 2P'; font-size:13px; color:var(--cyan); text-shadow:0 0 8px rgba(76,224,210,0.5);}
+.page-videojuegos .brand .sub{font-family:'IBM Plex Mono'; font-size:12px; color:rgba(216,228,240,0.5);}
+.page-videojuegos .search{display:flex; align-items:center; gap:8px; background:rgba(0,0,0,0.35); border:1px solid rgba(76,224,210,0.3); padding:8px 14px; width:290px; max-width:38vw;}
+.page-videojuegos .search input{background:none; border:none; color:var(--print); font-family:'IBM Plex Mono'; font-size:12.5px; width:100%; outline:none;}
+.page-videojuegos .meta{font-family:'IBM Plex Mono'; font-size:11px; color:rgba(216,228,240,0.4); text-transform:uppercase; letter-spacing:0.06em;}
+
+.page-videojuegos .sidebar{grid-area:side; padding:24px 16px; border-right:1px solid rgba(76,224,210,0.18);}
+.page-videojuegos .sidebar h2{font-family:'IBM Plex Mono'; font-size:10.5px; letter-spacing:0.14em; text-transform:uppercase; color:rgba(216,228,240,0.42); margin:0 0 12px 2px;}
+.page-videojuegos .flist{list-style:none; margin:0 0 22px; padding:0; display:flex; flex-direction:column; gap:2px;}
+.page-videojuegos .flist button{all:unset; cursor:pointer; display:flex; align-items:center; gap:9px; width:100%; padding:9px 10px; border-radius:2px; font-family:'IBM Plex Mono'; font-weight:600; font-size:12.5px; color:rgba(216,228,240,0.72); transition:background .15s,color .15s;}
+.page-videojuegos .flist button:hover{background:rgba(76,224,210,0.1);}
+.page-videojuegos .flist button[aria-pressed="true"]{background:rgba(76,224,210,0.16); color:var(--cyan);}
+.page-videojuegos .flist .dot{width:8px; height:8px; flex:none; background:currentColor; opacity:0.6;}
+.page-videojuegos .flist .count{margin-left:auto; font-family:'IBM Plex Mono'; font-size:10.5px; opacity:0.5;}
+.page-videojuegos .note{padding:12px; border:1px dashed rgba(76,224,210,0.3); font-family:'IBM Plex Mono'; font-size:10px; line-height:1.7; color:rgba(216,228,240,0.5);}
+.page-videojuegos .note b{color:var(--cyan);}
+
+.page-videojuegos .main{grid-area:main; padding:28px 32px 40px; overflow-y:auto;}
+.page-videojuegos .heading{display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:24px;}
+.page-videojuegos .heading h1{font-family:'Press Start 2P'; font-size:clamp(15px,2vw,20px); margin:0; color:var(--print); line-height:1.5;}
+.page-videojuegos .heading p{margin:8px 0 0; font-size:13px; color:rgba(216,228,240,0.5); max-width:48ch;}
+.page-videojuegos .count-tag{font-family:'IBM Plex Mono'; font-size:11.5px; color:rgba(216,228,240,0.4);}
+
+.page-videojuegos .grp-label{font-family:'IBM Plex Mono'; font-weight:700; font-size:10.5px; letter-spacing:0.12em; text-transform:uppercase; color:rgba(225,76,199,0.85); margin:0 0 12px 2px;}
+.page-videojuegos .shelf-row{display:flex; align-items:flex-end; gap:10px; padding:6px 4px 26px; overflow-x:auto; position:relative; margin-bottom:6px;}
+.page-videojuegos .shelf-row::after{content:""; position:absolute; left:0; right:0; bottom:10px; height:6px; background:linear-gradient(180deg, var(--plastic), #4A4E5C); border-radius:2px;}
+
+.page-videojuegos .cart{ all:unset; cursor:pointer; position:relative; flex:none; width:64px; height:84px; z-index:1;
+  opacity:0; transform:translateY(10px); animation:settleV .45s ease forwards; animation-delay:calc(var(--i,0)*28ms);
+  transition:transform .18s cubic-bezier(.2,.8,.3,1.2);}
+@keyframes settleV{to{opacity:1; transform:translateY(0);}}
+.page-videojuegos .cart:hover, .page-videojuegos .cart:focus-visible{ transform:translateY(-10px) rotate(-2deg); }
+.page-videojuegos .cart[aria-pressed="true"]{ transform:translateY(-14px) rotate(-2deg); }
+.page-videojuegos .cart .shell{ width:100%; height:100%; border-radius:4px 4px 2px 2px; position:relative; overflow:hidden;
+  box-shadow:2px 4px 10px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(0,0,0,0.35); display:block; }
+.page-videojuegos .cart .label{ position:absolute; top:6px; left:6px; right:6px; bottom:22px; background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; padding:4px; }
+.page-videojuegos .cart .label svg{ width:100%; height:100%; }
+.page-videojuegos .cart .cap{ position:absolute; left:0; right:0; bottom:2px; text-align:center; font-family:'IBM Plex Mono'; font-weight:700; font-size:7px; color:rgba(255,255,255,0.85); overflow:hidden; white-space:nowrap; text-overflow:ellipsis; padding:0 4px; }
+
+.page-videojuegos .save-card{position:relative; width:100%; background:var(--ink); color:var(--print); box-shadow:0 0 0 2px rgba(76,224,210,0.4), 0 20px 60px rgba(0,0,0,.6); max-height:86vh; overflow-y:auto; padding:24px 22px;
+  background-image: repeating-linear-gradient(0deg, rgba(76,224,210,0.03) 0px, rgba(76,224,210,0.03) 1px, transparent 1px, transparent 3px);}
+.page-videojuegos .sc-close{all:unset; cursor:pointer; position:absolute; top:16px; right:16px; width:26px; height:26px; display:flex; align-items:center; justify-content:center; border:1px solid rgba(76,224,210,0.4); font-family:'IBM Plex Mono'; font-size:14px; color:var(--cyan);}
+.page-videojuegos .sc-close:hover{background:rgba(76,224,210,0.12);}
+.page-videojuegos .catno{font-family:'IBM Plex Mono'; font-size:11px; color:var(--magenta); font-weight:700; letter-spacing:0.04em;}
+.page-videojuegos .save-card h3{font-family:'Press Start 2P'; font-size:15px; margin:12px 0 4px; line-height:1.6; color:var(--cyan);}
+.page-videojuegos .save-card .by{font-family:'IBM Plex Mono'; font-size:12px; color:rgba(216,228,240,0.6); margin:0 0 18px;}
+.page-videojuegos .prow{display:grid; grid-template-columns:96px 1fr; gap:6px 10px; font-family:'IBM Plex Mono'; font-size:11.5px; padding:8px 0; border-top:1px dashed rgba(76,224,210,0.25);}
+.page-videojuegos .prow .k{text-transform:uppercase; letter-spacing:0.05em; color:rgba(216,228,240,0.5); font-weight:700;}
+.page-videojuegos .tags{display:flex; flex-wrap:wrap; gap:6px; margin-top:3px;}
+.page-videojuegos .tags span{font-family:'IBM Plex Mono'; font-size:9.5px; padding:3px 7px; border:1px solid rgba(76,224,210,0.35); color:var(--cyan);}
+.page-videojuegos .devnotes{margin-top:16px; padding:12px; background:rgba(76,224,210,0.05); border-left:3px solid var(--magenta); font-family:'IBM Plex Mono'; font-size:11.5px; line-height:1.6;}
+.page-videojuegos .devnotes::before{content:"▮ "; color:var(--cyan);}
+.page-videojuegos .actions{display:flex; gap:8px; margin-top:22px; flex-wrap:wrap;}
+.page-videojuegos .actions button{all:unset; cursor:pointer; font-family:'IBM Plex Mono'; font-weight:700; font-size:11.5px; padding:10px 15px; border:1px solid rgba(76,224,210,0.4);}
+.page-videojuegos .btn-g{background:transparent; color:var(--cyan);}
+
+@media (max-width:880px){
+  .page-videojuegos .app{grid-template-columns:1fr; grid-template-rows:auto auto 1fr; grid-template-areas:"top" "side" "main";}
+  .page-videojuegos .sidebar{border-right:none; border-bottom:1px solid rgba(76,224,210,0.18); padding:14px 16px;}
+  .page-videojuegos .flist{flex-direction:row; flex-wrap:wrap;} .page-videojuegos .note{display:none;} .page-videojuegos .search{width:130px;}
+  .page-videojuegos .save-card{border-radius:12px 12px 0 0;}
+}
+@media (prefers-reduced-motion:reduce){ .page-videojuegos .cart{animation:none; opacity:1; transform:none;} }
