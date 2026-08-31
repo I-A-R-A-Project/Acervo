@@ -62,6 +62,16 @@
 .page-literatura .card-index{ padding:14px 12px; border:1px dashed rgba(184,139,78,0.3); border-radius:4px; font-family:'Courier Prime', monospace; font-size:11px; line-height:1.6; color:rgba(239,227,200,0.5); }
 .page-literatura .card-index b{ color:var(--brass-lt); }
 
+.page-literatura .bookmark-form-wrap{ margin:0 0 18px; padding:12px 10px 10px; border:1px solid rgba(184,139,78,0.25); border-radius:6px; background:rgba(0,0,0,0.13); }
+.page-literatura .bookmark-form-wrap h3{ margin:0 0 10px; font-family:'Courier Prime', monospace; font-size:10.5px; letter-spacing:0.14em; text-transform:uppercase; color:rgba(239,227,200,0.52); font-weight:700; }
+.page-literatura .bookmark-form{ display:flex; flex-direction:column; gap:8px; }
+.page-literatura .bookmark-form label{ display:flex; flex-direction:column; gap:5px; font-family:'Courier Prime', monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.08em; color:rgba(239,227,200,0.57); }
+.page-literatura .bookmark-form input, .page-literatura .bookmark-form select, .page-literatura .bookmark-form button{ width:100%; border-radius:4px; border:1px solid rgba(184,139,78,0.25); background:rgba(255,255,255,0.03); color:var(--paper); padding:9px 10px; font-size:12px; font-family:'Inter', sans-serif; }
+.page-literatura .bookmark-form input::placeholder{ color:rgba(239,227,200,0.32); }
+.page-literatura .bookmark-form button{ cursor:pointer; font-family:'Courier Prime', monospace; letter-spacing:0.08em; text-transform:uppercase; background:linear-gradient(180deg, rgba(184,139,78,0.22), rgba(184,139,78,0.12)); color:var(--brass-lt); transition:filter 0.15s ease; }
+.page-literatura .bookmark-form button:hover{ filter:brightness(1.08); }
+.page-literatura .bookmark-form button:disabled{ opacity:0.6; cursor:wait; }
+
 .page-literatura .main{ grid-area:main; padding:30px 34px 40px; position:relative; overflow-y:auto; }
 .page-literatura .main-heading{ display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:26px; gap:20px; flex-wrap:wrap; }
 .page-literatura .main-heading h1{ font-family:'Fraunces', serif; font-weight:900; font-size:clamp(26px, 3vw, 34px); margin:0; color:var(--paper); letter-spacing:-0.01em; }
@@ -92,6 +102,8 @@
 .page-literatura .card-close:hover{ background:rgba(0,0,0,0.08); }
 .page-literatura .call-number{ margin-top:18px; font-family:'Courier Prime', monospace; font-weight:700; font-size:13px; letter-spacing:0.03em; color:var(--burgundy); }
 .page-literatura .catalog-card h3{ font-family:'Fraunces', serif; font-weight:700; font-size:23px; line-height:1.2; margin:10px 0 2px; color:var(--ink); }
+.page-literatura .catalog-card h3 a, .page-literatura .catalog-card .by a{ color:inherit; text-decoration:underline; text-decoration-color:var(--brass); text-underline-offset:3px; }
+.page-literatura .catalog-card h3 a:hover, .page-literatura .catalog-card .by a:hover{ color:var(--burgundy); }
 .page-literatura .catalog-card .by{ font-family:'Fraunces', serif; font-style:italic; font-size:14.5px; color:var(--ink-soft); margin:0 0 16px; }
 .page-literatura .field-row{ display:grid; grid-template-columns:92px 1fr; gap:6px 10px; font-family:'Courier Prime', monospace; font-size:12px; padding:7px 0; border-top:1px dotted rgba(36,28,20,0.22); }
 .page-literatura .field-row .k{ text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft); font-weight:700; }
@@ -104,6 +116,8 @@
 .page-literatura .card-actions button{ all:unset; cursor:pointer; font-family:'Inter'; font-weight:600; font-size:12.5px; padding:10px 16px; border-radius:3px; text-align:center; }
 .page-literatura .btn-ghost{ background:transparent; border:1px solid rgba(36,28,20,0.35) !important; color:var(--ink); }
 .page-literatura .btn-ghost:hover{ background:rgba(0,0,0,0.06); }
+.page-literatura .btn-danger{ background:transparent; border:1px solid var(--danger) !important; color:var(--danger); }
+.page-literatura .btn-danger:hover{ background:rgba(140,59,46,0.1); }
 
 @media (max-width: 880px){
   .page-literatura .app{ grid-template-columns:1fr; grid-template-rows:auto auto 1fr; grid-template-areas:"top" "side" "main"; }
