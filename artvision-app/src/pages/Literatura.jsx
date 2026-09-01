@@ -13,36 +13,25 @@ const COLOR_VARS = { forest: 'var(--forest)', burgundy: 'var(--burgundy)', navy:
 
 const STORAGE_KEY = 'artvision-literatura-groups'
 
-const INITIAL_GROUPS = [
-  { id: 'poesia', label: 'Poetry', items: [
-    { id: 'lit-01', title: 'El Peso de las Horas', artist: 'Marina Solt', medium: 'poem book, 64 pp.', tags: ['melancholy', 'time', 'short lyric'], license: 'CC BY-NC 4.0', source: 'personal blog — marinasolt.net', saved: '12 mar 2026', notes: 'Useful for short verse rhythm and autumn campaign tone.' },
-    { id: 'lit-02', title: 'Cartas al Vacío', artist: 'Rubén Achaval', medium: 'epistolary poetry', tags: ['solitude', 'epistolary'], license: 'all rights reserved', source: 'Umbral magazine #14', saved: '02 ene 2026', notes: 'Great structure for serialized post formats.' },
-    { id: 'lit-03', title: 'Atlas de Sed', artist: 'Iara Beltrán', medium: 'visual poetry', tags: ['geography', 'experimental'], license: 'public domain', source: 'Wikimedia Commons', saved: '28 jul 2025', notes: '' },
-  ]},
-  { id: 'novela', label: 'Novel', items: [
-    { id: 'lit-04', title: 'Cuaderno de Islas', artist: 'Tomás Nieva', medium: 'short novel', tags: ['travel', 'memory'], license: 'CC BY 4.0', source: 'ArtStation — narrative', saved: '19 jun 2026', notes: 'Helpful fragmented structure reference.' },
-    { id: 'lit-05', title: 'La Sed del Mapa', artist: 'Elena Yrigoyen', medium: 'novel, ch. 1–3 (preview)', tags: ['adventure', 'fictional cartography'], license: 'editorial use authorized', source: 'curated portfolio', saved: '05 ago 2026', notes: '' },
-    { id: 'lit-06', title: 'Los Días de Cobre', artist: 'Facundo Ares', medium: 'novel', tags: ['realism', 'craft'], license: 'unknown', source: 'RSS feed — letras del sur', saved: '30 abr 2026', notes: '' },
-    { id: 'lit-07', title: 'Umbral de Sal', artist: 'Noa Ferrer', medium: 'short novel', tags: ['coast', 'grief'], license: 'CC BY-NC-ND', source: 'manual import', saved: '14 feb 2026', notes: '' },
-  ]},
-  { id: 'ensayo', label: 'Essay', items: [
-    { id: 'lit-08', title: 'Sobre el Ocio Necesario', artist: 'Guido Marchetti', medium: 'short essay', tags: ['philosophy', 'free time'], license: 'CC BY-SA 4.0', source: 'academic blog', saved: '09 may 2026', notes: 'Tone reference for more reflective writing.' },
-    { id: 'lit-09', title: 'El Ruido y la Forma', artist: 'Celia Prado', medium: 'essay on aesthetics', tags: ['design', 'perception'], license: 'public domain', source: 'digital museum — open archive', saved: '21 mar 2026', notes: '' },
-  ]},
-  { id: 'teatro', label: 'Theater', items: [
-    { id: 'lit-10', title: 'Tres Puertas', artist: 'Julián Corvo', medium: 'one-act play', tags: ['dialogue', 'absurd'], license: 'all rights reserved', source: 'artist portfolio', saved: '17 ago 2026', notes: '' },
-    { id: 'lit-11', title: 'La Sala de Espera', artist: 'Dana Quiroga', medium: 'monologue', tags: ['introspection'], license: 'CC BY-NC', source: 'DeviantArt — text section', saved: '03 jul 2026', notes: '' },
-  ]},
+const EMPTY_GROUPS = [
+  { id: 'poesia', label: 'Poetry', items: [] },
+  { id: 'novela', label: 'Novel', items: [] },
+  { id: 'ensayo', label: 'Essay', items: [] },
+  { id: 'teatro', label: 'Theater', items: [] },
 ]
 
 function loadStoredGroups() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return INITIAL_GROUPS
+    if (!raw) return EMPTY_GROUPS
     const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) && parsed.length ? parsed : INITIAL_GROUPS
+    if (!Array.isArray(parsed) || !parsed.length) return EMPTY_GROUPS
+    return parsed.map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !/^lit-\d+$/.test(item.id)),
+    }))
   } catch {
-    return INITIAL_GROUPS
+    return EMPTY_GROUPS
   }
 }
 
