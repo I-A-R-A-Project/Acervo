@@ -186,11 +186,45 @@ class ArtVisionWindow(QMainWindow):
 
         script = r'''
         (() => {
+          const cleanText = (value) => String(value || '').replace(/\s+/g, ' ').replace(/\u00A0/g, ' ').trim();
+          const stripHtml = (value) => cleanText(String(value || '').replace(/<[^>]+>/g, ' '));
+          const findSummaryNode = (selector, predicate) => {
+            const nodes = [...document.querySelectorAll(selector)];
+            return nodes.find((node) => {
+              const text = cleanText(stripHtml(node.innerHTML));
+              return text && (!predicate || predicate(text));
+            }) || null;
+          };
+          const findSummary = () => {
+            const host = (new URL(document.baseURI || window.location.href)).hostname.replace(/^www\./, '').toLowerCase();
+            if (host.includes('gutenberg.org')) {
+              const summaryNode = document.querySelector('div.summary-text-container');
+              return { summary: cleanText(stripHtml(summaryNode?.innerHTML || '')) };
+            }
+            if (host.includes('archiveofourown.org')) {
+              const authorLink = document.querySelector('a[rel="author"]');
+              const summaryNode = document.querySelector('div.summary.module blockquote.userstuff p');
+              return {
+                author: cleanText(authorLink?.textContent || ''),
+                summary: cleanText(stripHtml(summaryNode?.innerHTML || '')),
+              };
+            }
+            if (host.includes('wattpad.com')) {
+              const summaryNode = findSummaryNode('div.typography-paragraph-small', (text) => text.length > 80 && !/^(Reads|Votes|Parts|Complete|Movie|Print|Fiction|Romance|Tags)/i.test(text));
+              return { summary: cleanText(stripHtml(summaryNode?.innerHTML || '')) };
+            }
+            if (host.includes('openlibrary.org')) {
+              const summaryNode = document.querySelector('ol-read-more.book-description p');
+              return { summary: cleanText(stripHtml(summaryNode?.innerHTML || '')) };
+            }
+            return {};
+          };
+
           try {
             const base = document.baseURI || window.location.href;
             const parsedUrl = new URL(base);
             const host = parsedUrl.hostname.replace(/^www\./, '').toLowerCase();
-            const titleNode = document.querySelector('h1.work-title[itemprop="name"], tr th + td[itemprop="headline"], h2.title.heading, h1[data-testid="title"]');
+            const titleNode = document.querySelector('h1.work-title[itemprop="name"], tr th + td[itemprop="headline"], h2.title.heading, h1[data-testid="title"], h1[itemprop="name"], h1#book_title');
             const fallbackTitleNode = document.querySelector('meta[property="og:title"], meta[name="twitter:title"], meta[name="citation_title"]');
             let title = titleNode?.textContent?.trim() || fallbackTitleNode?.content || document.title || 'Untitled';
             let author = document.querySelector('meta[name="author"], meta[property="article:author"], meta[name="twitter:creator"]')?.content ||
@@ -204,30 +238,36 @@ class ArtVisionWindow(QMainWindow):
               author = author || authorLink.textContent;
               authorUrl = authorLink.href;
             }
-            if (host === 'openlibrary.org' || host === 'www.openlibrary.org') {
+            if (host.includes('openlibrary.org')) {
               const workTitle = document.querySelector('h1.work-title[itemprop="name"]');
               if (workTitle) title = workTitle.textContent;
               const link = document.querySelector('a[href*="/authors/"]');
               if (link) { author = link.textContent; authorUrl = link.href; }
             }
-            if (host === 'gutenberg.org' || host === 'www.gutenberg.org') {
-              const bookTitle = document.querySelector('tr th + td[itemprop="headline"]');
-              if (bookTitle) title = bookTitle.textContent;
-              const link = document.querySelector('a[href*="/ebooks/author/"]');
-              if (link) { author = link.textContent; authorUrl = link.href; }
+            if (host.includes('gutenberg.org')) {
+              const table = document.querySelector('table.bibrec#about_book_table');
+              if (table) {
+                const rows = [...table.querySelectorAll('tr')];
+                const titleRow = rows.find((row) => /^\s*Title\s*$/i.test(row.querySelector('th')?.textContent || ''));
+                const authorRow = rows.find((row) => /^\s*Author\s*$/i.test(row.querySelector('th')?.textContent || ''));
+                const titleCell = titleRow?.querySelector('td') || null;
+                const authorCell = authorRow?.querySelector('td') || null;
+                if (titleCell) title = titleCell.textContent || title;
+                if (authorCell) author = authorCell.textContent || author;
+              }
             }
             const rawTitle = String(title).trim();
-            if (host === 'wattpad.com' || host === 'www.wattpad.com') {
-              const storyTitle = document.querySelector('h1[data-testid="title"]');
+            if (host.includes('wattpad.com')) {
+              const storyTitle = document.querySelector('h1[data-testid="title"]') || document.querySelector('h1');
               if (storyTitle) title = storyTitle.textContent;
-              const match = rawTitle.match(/^(.*?)\s+-\s+([^-]+?)\s+-\s+Wattpad$/i);
-              if (match) { title = match[1].trim(); author = match[2].trim(); }
+              const authorAnchor = document.querySelector('a[href*="/user/"]');
+              if (authorAnchor) author = authorAnchor.textContent;
               if (!authorUrl && author) authorUrl = `https://www.wattpad.com/user/${encodeURIComponent(author)}`;
             }
-            if (host === 'archiveofourown.org' || host === 'www.archiveofourown.org') {
+            if (host.includes('archiveofourown.org')) {
               const workTitle = document.querySelector('h2.title.heading');
               if (workTitle) title = workTitle.textContent;
-              const link = document.querySelector('a[href*="/users/"]');
+              const link = document.querySelector('a[rel="author"]');
               if (link) { author = link.textContent; authorUrl = link.href; }
               const parts = String(title).replace(/\s*\[?Archive of Our Own\]?\s*$/i, '').split(' - ').map((part) => part.trim()).filter(Boolean);
               if (!author && parts.length >= 2) {
@@ -238,16 +278,19 @@ class ArtVisionWindow(QMainWindow):
             }
             const cleanedTitle = String(title).replace(/\s*\[?Archive of Our Own\]?\s*$/i, '').trim();
             const sourceId = parsedUrl.pathname.match(/\/books\/(OL\d+M)|\/ebooks\/(\d+)|\/works\/(\d+)|\/story\/(\d+)/i);
+            const summaryInfo = findSummary();
+            const summary = cleanText(summaryInfo.summary || '');
             return {
               title: cleanedTitle || rawTitle,
               author: String(author).trim(),
               authorUrl: String(authorUrl || '').trim(),
               source: host,
               sourceId: sourceId ? (sourceId[1] || sourceId[2] || sourceId[3] || sourceId[4]) : host,
-              url: String(base).trim()
+              url: String(base).trim(),
+              summary,
             };
           } catch (error) {
-            return { title: '', author: '', source: '', url: String(window.location.href || '') };
+            return { title: '', author: '', source: '', url: String(window.location.href || ''), summary: '' };
           }
         })();
         '''
@@ -263,6 +306,7 @@ class ArtVisionWindow(QMainWindow):
                 "source": result.get("source") or "",
                 "sourceId": result.get("sourceId") or "",
                 "url": result.get("url") or "",
+                "summary": result.get("summary") or "",
             }
             target_url = QUrl(f"{self.server.url.rstrip('/')}/literatura")
             def _dispatch_autofill():
