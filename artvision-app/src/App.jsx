@@ -8,7 +8,6 @@ import Musica from './pages/Musica.jsx'
 import Danza from './pages/Danza.jsx'
 import Cine from './pages/Cine.jsx'
 import Fotografia from './pages/Fotografia.jsx'
-import Comics from './pages/Comics.jsx'
 import Videojuegos from './pages/Videojuegos.jsx'
 
 export default function App() {
@@ -24,7 +23,6 @@ export default function App() {
         <Route path="/danza" element={<Danza />} />
         <Route path="/cine" element={<Cine />} />
         <Route path="/fotografia" element={<Fotografia />} />
-        <Route path="/comics" element={<Comics />} />
         <Route path="/videojuegos" element={<Videojuegos />} />
       </Routes>
     </BrowserRouter>

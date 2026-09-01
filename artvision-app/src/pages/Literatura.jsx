@@ -98,6 +98,27 @@ function parseArchiveOfOurOwnTitle(rawTitle) {
   return { title: cleaned, author: '' }
 }
 
+function stripHtml(html) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function normaliseSummaryText(text) {
+  return (text || '')
+    .replace(/\s+\(This is an automatically generated summary\.\)/gi, '')
+    .replace(/\s+\[.*?\]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 async function fetchMetadataFromUrl(url) {
   if (!url) return null
 
@@ -114,66 +135,107 @@ async function fetchMetadataFromUrl(url) {
         const data = await res.json()
         const entry = data[`OLID:${id}`]
         if (!entry) return null
+
+        const summaryFromApi = entry.excerpts?.[0]?.excerpt || ''
+        const summary = summaryFromApi ? normaliseSummaryText(stripHtml(summaryFromApi)) : ''
+
         return {
           title: entry.title || '',
           author: entry.authors?.[0]?.name || '',
+          summary,
           source: 'OpenLibrary',
           sourceId: id,
           titleUrl: url,
           authorUrl: linkFor(entry.authors?.[0]?.url || ''),
         }
       }
+
+      const html = await fetch(url).then((res) => res.text())
+      const summaryMatch = html.match(/<ol-read-more[^>]*class=["'][^"']*book-description[^"']*["'][^>]*>([\s\S]*?)<\/ol-read-more>/i)
+      const summary = summaryMatch ? normaliseSummaryText(stripHtml(summaryMatch[1])) : ''
+      const titleMatch = html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i)
+      const authorMatch = html.match(/<meta[^>]*name=["']twitter:data1["'][^>]*content=["']([^"']+)["']/i)
+
+      if (titleMatch || authorMatch || summary) {
+        return {
+          title: titleMatch ? titleMatch[1].replace(/\s*\|\s*Open Library.*$/i, '').trim() : '',
+          author: authorMatch ? authorMatch[1].trim() : '',
+          summary,
+          source: 'OpenLibrary',
+          sourceId: parsed.pathname.split('/').filter(Boolean).slice(-1)[0] || 'manual',
+          titleUrl: url,
+          authorUrl: '',
+        }
+      }
     }
 
     if (host.includes('gutenberg.org')) {
-      const match = parsed.pathname.match(/\/ebooks\/(\d+)/i)
-      if (match) {
-        const id = match[1]
-        const res = await fetch(`https://gutendex.com/books/${id}`)
-        if (!res.ok) return null
-        const data = await res.json()
+      const html = await fetch(url).then((res) => res.text())
+      const bibrecMatch = html.match(/<table[^>]*class=["'][^"']*bibrec[^"']*["'][^>]*id=["']about_book_table["'][^>]*>([\s\S]*?)<\/table>/i)
+      const summaryMatch = html.match(/<div[^>]*class=["'][^"']*summary-text-container[^"']*["'][^>]*>([\s\S]*?)<\/div>/i)
+
+      const rows = bibrecMatch ? [...bibrecMatch[1].matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)].map((match) => match[1]) : []
+      const titleRow = rows.find((row) => /<th[^>]*>\s*Title\s*<\/th>/i.test(row))
+      const authorRow = rows.find((row) => /<th[^>]*>\s*Author\s*<\/th>/i.test(row))
+
+      const title = titleRow ? stripHtml((titleRow.match(/<td[^>]*>([\s\S]*?)<\/td>/i) || [])[1] || '').trim() : ''
+      const author = authorRow ? stripHtml((authorRow.match(/<td[^>]*>([\s\S]*?)<\/td>/i) || [])[1] || '').trim() : ''
+      const summary = summaryMatch ? normaliseSummaryText(stripHtml(summaryMatch[1])) : ''
+
+      if (title || author || summary) {
         return {
-          title: data.title || '',
-          author: data.authors?.[0]?.name || '',
+          title,
+          author,
+          summary,
           source: 'Project Gutenberg',
-          sourceId: `ebook-${id}`,
+          sourceId: parsed.pathname.match(/\/ebooks\/(\d+)/i)?.[1] || 'manual',
           titleUrl: url,
-          authorUrl: data.authors?.[0]?.url || '',
+          authorUrl: '',
         }
       }
     }
 
     if (host.includes('wattpad.com')) {
-      const titleFromPath = decodeURIComponent(parsed.pathname.replace(/^\/+|\/+$/g, '')).replace(/^story\/[0-9]+-?/i, '').replace(/-/g, ' ')
-      if (titleFromPath) {
-        const parts = titleFromPath.split('/').filter(Boolean)
-        const author = parts.length > 1 ? parts[0] : ''
-        const title = parts.length > 1 ? parts[1] : parts[0]
-        return {
-          title: title.trim(),
-          author: author.trim(),
-          source: 'Wattpad',
-          sourceId: `story-${parsed.pathname.match(/\/story\/(\d+)/i)?.[1] || 'manual'}`,
-          titleUrl: url,
-          authorUrl: author ? `https://www.wattpad.com/user/${encodeURIComponent(author)}` : '',
-        }
+      const html = await fetch(url).then((res) => res.text())
+      const titleMatch = html.match(/<h1[^>]*data-testid=["']title["'][^>]*>([\s\S]*?)<\/h1>/i) || html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)
+      const authorMatch = html.match(/<a[^>]*href=["']https?:\/\/www\.wattpad\.com\/user\/[^"']+["'][^>]*>([\s\S]*?)<\/a>/i)
+      const summaryMatches = [...html.matchAll(/<div[^>]*class=["'][^"']*typography-paragraph-small[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi)]
+      const summary = summaryMatches
+        .map((match) => normaliseSummaryText(stripHtml(match[1])))
+        .filter((text) => text.length > 80 && !/^(Reads|Votes|Parts|Complete|Movie|Print|Fiction|Romance)/i.test(text))
+        .sort((a, b) => b.length - a.length)[0] || ''
+
+      const title = titleMatch ? stripHtml(titleMatch[1]).trim() : ''
+      const author = authorMatch ? stripHtml(authorMatch[1]).trim() : ''
+
+      return {
+        title,
+        author,
+        summary,
+        source: 'Wattpad',
+        sourceId: `story-${parsed.pathname.match(/\/story\/(\d+)/i)?.[1] || 'manual'}`,
+        titleUrl: url,
+        authorUrl: author ? `https://www.wattpad.com/user/${encodeURIComponent(author)}` : '',
       }
     }
 
     if (host.includes('archiveofourown.org')) {
       const res = await fetch(url, { mode: 'cors' })
-      if (!res.ok) {
-        return null
-      }
+      if (!res.ok) return null
 
       const html = await res.text()
       const titleMatch = html.match(/<title[^>]*>(.*?)<\/title>/is)
-      const authorMatch = html.match(/<meta[^>]*name=["']author["'][^>]*content=["']([^"']+)["']/i)
+      const authorMatch = html.match(/<a[^>]*rel=["']author["'][^>]*href=["'][^"']+["'][^>]*>(.*?)<\/a>/is)
+      const summaryMatch = html.match(/<div[^>]*class=["'][^"']*summary\s+module[^"']*["'][^>]*>([\s\S]*?)<\/div>/i)
       const title = titleMatch ? titleMatch[1].replace(/\s*\[Archive of Our Own\]\s*$/i, '').trim() : ''
       const parsedTitle = parseArchiveOfOurOwnTitle(title)
+      const summary = summaryMatch ? normaliseSummaryText(stripHtml(summaryMatch[1])) : ''
+      const author = parsedTitle.author || (authorMatch ? stripHtml(authorMatch[1]).trim() : '') || ''
+
       return {
         title: parsedTitle.title || '',
-        author: parsedTitle.author || (authorMatch ? authorMatch[1].trim() : '') || '',
+        author,
+        summary,
         source: 'Archive of Our Own',
         sourceId: `work-${parsed.pathname.match(/\/works\/(\d+)/i)?.[1] || 'manual'}`,
         titleUrl: url,
@@ -189,7 +251,7 @@ async function fetchMetadataFromUrl(url) {
 
 export default function Literatura() {
   const [groups, setGroups] = useState(() => loadStoredGroups())
-  const [form, setForm] = useState({ url: '', title: '', author: '', source: '', sourceId: '', titleUrl: '', authorUrl: '', shelf: 'poesia' })
+  const [form, setForm] = useState({ url: '', title: '', author: '', summary: '', source: '', sourceId: '', titleUrl: '', authorUrl: '', shelf: 'poesia' })
   const [fetching, setFetching] = useState(false)
 
   useEffect(() => {
@@ -210,6 +272,7 @@ export default function Literatura() {
         url: payload.url || prev.url,
         title: payload.title || prev.title,
         author: payload.author || prev.author,
+        summary: payload.summary || prev.summary,
         authorUrl: payload.authorUrl || prev.authorUrl,
         source: payload.source || prev.source,
         sourceId: payload.sourceId || prev.sourceId,
@@ -247,11 +310,17 @@ export default function Literatura() {
       url: value,
       title: metadata.title || prev.title,
       author: metadata.author || prev.author,
+      summary: metadata.summary || prev.summary,
       source: metadata.source || prev.source,
       sourceId: metadata.sourceId || prev.sourceId,
       titleUrl: metadata.titleUrl || prev.titleUrl,
       authorUrl: metadata.authorUrl || prev.authorUrl,
     }))
+  }
+
+  function summaryTextFromRecord(entry) {
+    if (entry?.summary && entry.summary.trim()) return entry.summary.trim()
+    return `Saved from ${entry?.source || 'source'} for later reference.`
   }
 
   function handleSubmit(event) {
@@ -265,6 +334,8 @@ export default function Literatura() {
 
     if (!title || !form.url.trim()) return
 
+    const summary = (form.summary || '').trim() || summaryTextFromRecord({ source, summary: '' })
+
     const newEntry = {
       id: `bookmark-${Date.now()}`,
       title,
@@ -277,11 +348,11 @@ export default function Literatura() {
       license: 'user-saved',
       source: `${source} — ${form.sourceId || sourceIdForUrl(form.url.trim())}`,
       saved: new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric' }),
-      notes: `Saved from ${source} for later reference and cross-posting.`,
+      notes: summary,
     }
 
     setGroups((prev) => prev.map((group) => group.id === shelfId ? { ...group, items: [newEntry, ...group.items] } : group))
-    setForm({ url: '', title: '', author: '', source: '', sourceId: '', titleUrl: '', authorUrl: '', shelf: shelfId })
+    setForm({ url: '', title: '', author: '', summary: '', source: '', sourceId: '', titleUrl: '', authorUrl: '', shelf: shelfId })
     setActive(shelfId)
   }
 
@@ -349,6 +420,15 @@ export default function Literatura() {
                   value={form.author}
                   onChange={(e) => setForm((prev) => ({ ...prev, author: e.target.value }))}
                   placeholder="Auto-filled from URL"
+                />
+              </label>
+              <label>
+                Summary
+                <textarea
+                  value={form.summary}
+                  onChange={(e) => setForm((prev) => ({ ...prev, summary: e.target.value }))}
+                  placeholder="Auto-filled from source summary; edit if needed"
+                  rows={3}
                 />
               </label>
               <label>

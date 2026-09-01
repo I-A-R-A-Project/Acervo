@@ -13,7 +13,6 @@ const ARTS = [
   { path: '/danza', name: 'Danza', tag: 'el escenario', from: '#141014', to: '#3a1220' },
   { path: '/cine', name: 'Cine', tag: 'sala de proyección', from: '#0D0D0F', to: '#3a1015' },
   { path: '/fotografia', name: 'Fotografía', tag: 'el cuarto oscuro', from: '#0A0A0A', to: '#3D0F0F' },
-  { path: '/comics', name: 'Cómics', tag: 'la página', from: '#151515', to: '#3a0e0e' },
   { path: '/videojuegos', name: 'Videojuegos', tag: 'la cartucho-teca', from: '#0B0E1A', to: '#141c33' },
 ]
 
