@@ -27,12 +27,12 @@ function loadStoredGroups() {
     if (!raw) return EMPTY_GROUPS
     const parsed = JSON.parse(raw)
     if (!Array.isArray(parsed) || !parsed.length) return EMPTY_GROUPS
-    return parsed.map((group) => ({
+    return deduplicateGroups(parsed.map((group) => ({
       ...group,
       items: Array.isArray(group.items)
         ? group.items.filter((item) => !/^lit-\d+$/.test(item.id))
         : [],
-    }))
+    })))
   } catch {
     return EMPTY_GROUPS
   }
@@ -46,25 +46,78 @@ function saveStoredGroups(groups) {
   }
 }
 
+function sourceKey(book) {
+  let source = String(book.source || '').split(' — ')[0].toLowerCase().replace(/^www\./, '')
+  try {
+    source = new URL(book.titleUrl).hostname.toLowerCase().replace(/^www\./, '')
+  } catch {
+    // Keep the stored source when an older manual entry has no valid URL.
+  }
+  const sourceId = String(book.sourceId || '').trim().toLowerCase()
+  if (source && sourceId && !['manual', source].includes(sourceId)) {
+    return `${source}:${sourceId}`
+  }
+  return book.titleUrl || book.id
+}
+
+function preferBook(current, incoming) {
+  const currentScore = Number(Boolean(current.metadataComplete)) * 2
+    + Number(Boolean(current.summary)) + Number(Boolean(current.author))
+  const incomingScore = Number(Boolean(incoming.metadataComplete)) * 2
+    + Number(Boolean(incoming.summary)) + Number(Boolean(incoming.author))
+  return incomingScore > currentScore ? incoming : current
+}
+
+function deduplicateGroups(groups) {
+  const seen = new Map()
+  groups.forEach((group) => {
+    group.items.forEach((item) => {
+      const key = sourceKey(item)
+      const previous = seen.get(key)
+      if (!previous) {
+        seen.set(key, { groupId: group.id, item })
+        return
+      }
+      seen.set(key, {
+        groupId: group.id,
+        item: preferBook(previous.item, item),
+      })
+    })
+  })
+
+  return groups.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => {
+      const record = seen.get(sourceKey(item))
+      return record?.groupId === group.id && record.item === item
+    }).map((item) => {
+      const record = seen.get(sourceKey(item))
+      return record.item
+    }),
+  }))
+}
+
 function mergeImportedBook(groups, entry) {
+  const entryKey = sourceKey(entry)
   let found = false
   const next = groups.map((group) => ({
     ...group,
     items: group.items.map((item) => {
-      if (item.titleUrl !== entry.titleUrl) return item
+      if (sourceKey(item) !== entryKey) return item
       found = true
+      const preferred = preferBook(item, entry)
       return {
         ...item,
-        ...entry,
+        ...preferred,
         id: item.id,
         tags: [...new Set([...(item.tags || []), ...(entry.tags || [])])],
       }
     }),
   }))
-  if (found) return next
-  return next.map((group) => group.id === 'poesia'
+  if (found) return deduplicateGroups(next)
+  return deduplicateGroups(next.map((group) => group.id === 'poesia'
     ? { ...group, items: [entry, ...group.items] }
-    : group)
+    : group))
 }
 
 function sourceIdForUrl(url) {
@@ -426,14 +479,7 @@ export default function Literatura() {
         metadataComplete: Boolean(metadata?.title && metadata?.author && metadata?.summary),
       }
     })).then((entries) => {
-      updateGroups((prev) => {
-        const existingUrls = new Set(prev.flatMap((group) => group.items.map((item) => item.titleUrl)))
-        const freshEntries = entries.filter((entry) => !existingUrls.has(entry.titleUrl))
-        if (!freshEntries.length) return prev
-        return prev.map((group) => group.id === 'poesia'
-          ? { ...group, items: [...freshEntries, ...group.items] }
-          : group)
-      })
+      updateGroups((prev) => entries.reduce((next, entry) => mergeImportedBook(next, entry), prev))
       setActive('poesia')
     })
   }, [setActive])

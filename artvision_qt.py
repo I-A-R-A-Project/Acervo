@@ -72,10 +72,13 @@ class ArtVisionHttpServer:
 
 
 class ArtVisionWindow(QMainWindow):
-    def __init__(self, initial_path="/literatura", initial_urls=None):
+    def __init__(self, initial_path="/literatura", initial_urls=None, max_source_tabs=2):
         super().__init__()
         self.setWindowTitle("ArtVision")
         self.resize(1280, 820)
+        self.max_source_tabs = max_source_tabs
+        self.pending_source_urls = list(initial_urls or [])
+        self.active_source_tabs = set()
 
         PROFILE_DIR.mkdir(parents=True, exist_ok=True)
         self.history = HistoryStore(str(PROFILE_DIR / "history.db"))
@@ -123,8 +126,7 @@ class ArtVisionWindow(QMainWindow):
             None,
         )
         self.tabs.setCurrentWidget(self.artvision_app_tab)
-        for url in initial_urls or []:
-            self.open_source_tab(url)
+        self._open_next_source_tabs()
 
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -179,6 +181,7 @@ class ArtVisionWindow(QMainWindow):
 
     def open_source_tab(self, url):
         view = self.new_tab(url, title="Cargando...")
+        self.active_source_tabs.add(view)
         host = QUrl(url).host().lower()
         wait_ms = 30000 if "archiveofourown.org" in host else 8000
         view.loadFinished.connect(
@@ -187,8 +190,13 @@ class ArtVisionWindow(QMainWindow):
         )
         return view
 
+    def _open_next_source_tabs(self):
+        while self.pending_source_urls and len(self.active_source_tabs) < self.max_source_tabs:
+            self.open_source_tab(self.pending_source_urls.pop(0))
+
     def _capture_after_delay(self, view, ok, delay):
         if not ok:
+            self.close_view_tab(view)
             return
         QTimer.singleShot(delay, lambda: self.capture_view(view, auto_save=True))
 
@@ -198,6 +206,15 @@ class ArtVisionWindow(QMainWindow):
         widget = self.tabs.widget(index)
         self.tabs.removeTab(index)
         widget.deleteLater()
+        self.active_source_tabs.discard(widget)
+        self._open_next_source_tabs()
+
+    def close_view_tab(self, view):
+        self.active_source_tabs.discard(view)
+        index = self.tabs.indexOf(view)
+        if index >= 0:
+            self.close_tab(index)
+        self._open_next_source_tabs()
 
     def navigate_to_address(self, text):
         if self.current_view() is self.artvision_app_tab:
@@ -344,6 +361,8 @@ class ArtVisionWindow(QMainWindow):
 
         def _on_result(result):
             if not result:
+                if auto_save:
+                    self.close_view_tab(view)
                 return
             payload = {
                 "type": "artvision-autofill",
@@ -357,6 +376,7 @@ class ArtVisionWindow(QMainWindow):
                 "autoSave": auto_save,
             }
             if auto_save and not payload["title"]:
+                self.close_view_tab(view)
                 return
             target_url = QUrl(f"{self.server.url.rstrip('/')}/literatura")
             def _dispatch_autofill():
@@ -378,6 +398,8 @@ class ArtVisionWindow(QMainWindow):
                     "})();"
                 )
                 self.artvision_app_tab.page().runJavaScript(js)
+                if auto_save:
+                    QTimer.singleShot(0, lambda: self.close_view_tab(view))
 
             self.tabs.setCurrentWidget(self.artvision_app_tab)
             if self.artvision_app_tab.url().toString() != target_url.toString():
@@ -400,8 +422,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--path", default="/literatura", help="Ruta inicial de ArtVision")
     parser.add_argument("--url", action="append", default=[], help="URL externa para abrir en una pestaña")
+    parser.add_argument(
+        "--max-source-tabs",
+        type=int,
+        choices=(1, 2),
+        default=2,
+        help="Cantidad máxima de páginas externas cargando a la vez",
+    )
     args = parser.parse_args()
 
-    window = ArtVisionWindow(initial_path=args.path, initial_urls=args.url)
+    window = ArtVisionWindow(
+        initial_path=args.path,
+        initial_urls=args.url,
+        max_source_tabs=args.max_source_tabs,
+    )
     window.show()
     sys.exit(app.exec())
