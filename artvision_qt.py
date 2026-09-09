@@ -2,6 +2,7 @@ import json
 import os
 import sys
 import threading
+import argparse
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
@@ -17,6 +18,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from web_common.navbar import BasicNavbar, address_to_url, bind_navigation, save_web_page
+from web_common.history import HistoryDialog, HistoryStore
 from web_common.tabs import create_profiled_web_view
 from web_common.web_profiles import build_web_profile
 
@@ -24,6 +26,7 @@ ARTVISION_ROOT = Path(__file__).resolve().parent
 ARTVISION_APP_ROOT = ARTVISION_ROOT / "artvision-app"
 ARTVISION_DIST = ARTVISION_APP_ROOT / "dist"
 PROFILE_DIR = Path.home() / ".artvision_qt"
+ARTVISION_PORT = 8765
 
 
 class SpaHandler(SimpleHTTPRequestHandler):
@@ -54,7 +57,8 @@ class ArtVisionHttpServer:
         if self.server is not None:
             return
 
-        self.server = ThreadingHTTPServer(("127.0.0.1", 0), lambda *args, **kwargs: SpaHandler(*args, directory=self.directory, **kwargs))
+        # localStorage is scoped by origin, so the port must stay stable between launches.
+        self.server = ThreadingHTTPServer(("127.0.0.1", ARTVISION_PORT), lambda *args, **kwargs: SpaHandler(*args, directory=self.directory, **kwargs))
         port = self.server.server_address[1]
         self.url = f"http://127.0.0.1:{port}/"
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
@@ -68,12 +72,14 @@ class ArtVisionHttpServer:
 
 
 class ArtVisionWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, initial_path="/literatura"):
         super().__init__()
         self.setWindowTitle("ArtVision")
         self.resize(1280, 820)
 
         PROFILE_DIR.mkdir(parents=True, exist_ok=True)
+        self.history = HistoryStore(str(PROFILE_DIR / "history.db"))
+        self.history_session_id = self.history.new_session_id()
         self.profile = build_web_profile(
             "ArtVisionProfile",
             self,
@@ -94,6 +100,7 @@ class ArtVisionWindow(QMainWindow):
             self.navbar,
             self.current_view,
             address_handler=self.navigate_to_address,
+            history_handler=self.show_history,
             save_handler=lambda: save_web_page(self.current_view()),
         )
 
@@ -109,7 +116,7 @@ class ArtVisionWindow(QMainWindow):
 
         self.artvision_app_tab = self.new_tab(self.server.url, title="ArtVision")
         self.artvision_app_tab.setProperty("artvision_app", True)
-        self.artvision_app_tab.setUrl(QUrl(f"{self.server.url}literatura"))
+        self.artvision_app_tab.setUrl(QUrl(f"{self.server.url}{initial_path.lstrip('/')}"))
         self.tabs.tabBar().setTabButton(
             self.tabs.indexOf(self.artvision_app_tab),
             QTabBar.ButtonPosition.RightSide,
@@ -142,8 +149,28 @@ class ArtVisionWindow(QMainWindow):
         index = self.tabs.addTab(view, title)
         self.tabs.setCurrentIndex(index)
         view.urlChanged.connect(lambda qurl, current=view: self._sync_address(current, qurl))
+        view.loadFinished.connect(
+            lambda ok, current=view: self._record_history(current, ok)
+        )
         view.titleChanged.connect(lambda title_text, current=view: self._sync_title(current, title_text))
         return view
+
+    def _record_history(self, view, ok):
+        url = view.url()
+        if not ok or url.isEmpty() or url.toString().startswith(self.server.url):
+            return
+        self.history.add_history(
+            url.toString(),
+            view.title() or url.toString(),
+            self.history_session_id,
+        )
+
+    def show_history(self):
+        dialog = HistoryDialog(
+            self.history,
+            on_open=lambda url: self.new_tab(url, title="Historial"),
+        )
+        dialog.exec()
 
     def new_blank_tab(self):
         self.new_tab("https://example.com", title="New tab")
@@ -188,109 +215,83 @@ class ArtVisionWindow(QMainWindow):
         (() => {
           const cleanText = (value) => String(value || '').replace(/\s+/g, ' ').replace(/\u00A0/g, ' ').trim();
           const stripHtml = (value) => cleanText(String(value || '').replace(/<[^>]+>/g, ' '));
-          const findSummaryNode = (selector, predicate) => {
-            const nodes = [...document.querySelectorAll(selector)];
-            return nodes.find((node) => {
-              const text = cleanText(stripHtml(node.innerHTML));
-              return text && (!predicate || predicate(text));
-            }) || null;
+
+          const extractGutenberg = () => {
+            const table = document.querySelector('table.bibrec#about_book_table');
+            if (!table) return {};
+
+            const rows = [...table.querySelectorAll('tr')];
+            const titleRow = rows.find((row) => /^\s*Title\s*$/i.test(row.querySelector('th')?.textContent || ''));
+            const authorRow = rows.find((row) => /^\s*Author\s*$/i.test(row.querySelector('th')?.textContent || ''));
+            const title = cleanText(stripHtml(titleRow?.querySelector('td')?.innerHTML || ''));
+            const author = cleanText(stripHtml(authorRow?.querySelector('td')?.innerHTML || ''));
+            const summaryNode = document.querySelector('div.summary-text-container');
+            return {
+              title,
+              author,
+              summary: summaryNode ? cleanText(stripHtml(summaryNode.innerHTML)) : '',
+            };
           };
-          const findSummary = () => {
-            const host = (new URL(document.baseURI || window.location.href)).hostname.replace(/^www\./, '').toLowerCase();
-            if (host.includes('gutenberg.org')) {
-              const summaryNode = document.querySelector('div.summary-text-container');
-              return { summary: cleanText(stripHtml(summaryNode?.innerHTML || '')) };
-            }
-            if (host.includes('archiveofourown.org')) {
-              const authorLink = document.querySelector('a[rel="author"]');
-              const summaryNode = document.querySelector('div.summary.module blockquote.userstuff p');
-              return {
-                author: cleanText(authorLink?.textContent || ''),
-                summary: cleanText(stripHtml(summaryNode?.innerHTML || '')),
-              };
-            }
-            if (host.includes('wattpad.com')) {
-              const summaryNode = findSummaryNode('div.typography-paragraph-small', (text) => text.length > 80 && !/^(Reads|Votes|Parts|Complete|Movie|Print|Fiction|Romance|Tags)/i.test(text));
-              return { summary: cleanText(stripHtml(summaryNode?.innerHTML || '')) };
-            }
-            if (host.includes('openlibrary.org')) {
-              const summaryNode = document.querySelector('ol-read-more.book-description p');
-              return { summary: cleanText(stripHtml(summaryNode?.innerHTML || '')) };
-            }
-            return {};
+
+          const extractWattpad = () => {
+            const titleNode = document.querySelector('h1[data-testid="title"]') || document.querySelector('h1');
+            const authorNode = document.querySelector('a[href*="/user/"]');
+            const summaryNodes = [...document.querySelectorAll('div.typography-paragraph-small')];
+            const summary = summaryNodes
+              .map((node) => cleanText(stripHtml(node.innerHTML)))
+              .find((text) => text.length > 80 && !/^(Reads|Votes|Parts|Complete|Movie|Print|Fiction|Romance|Tags)/i.test(text)) || '';
+
+            return {
+              title: cleanText(titleNode?.textContent || ''),
+              author: cleanText(authorNode?.textContent || ''),
+              summary,
+            };
+          };
+
+          const extractAO3 = () => {
+            const authorNode = document.querySelector('a[rel="author"]');
+            const summaryNode = document.querySelector('div.summary.module blockquote.userstuff p');
+            return {
+              title: cleanText(document.querySelector('h2.title.heading')?.textContent || ''),
+              author: cleanText(authorNode?.textContent || ''),
+              summary: cleanText(stripHtml(summaryNode?.innerHTML || '')),
+            };
+          };
+
+          const extractOpenLibrary = () => {
+            const summaryNode = document.querySelector('ol-read-more.book-description p');
+            return {
+              title: cleanText(document.querySelector('h1.work-title[itemprop="name"]')?.textContent || ''),
+              author: cleanText(document.querySelector('a[href*="/authors/"]')?.textContent || ''),
+              summary: cleanText(stripHtml(summaryNode?.innerHTML || '')),
+            };
           };
 
           try {
             const base = document.baseURI || window.location.href;
             const parsedUrl = new URL(base);
             const host = parsedUrl.hostname.replace(/^www\./, '').toLowerCase();
-            const titleNode = document.querySelector('h1.work-title[itemprop="name"], tr th + td[itemprop="headline"], h2.title.heading, h1[data-testid="title"], h1[itemprop="name"], h1#book_title');
-            const fallbackTitleNode = document.querySelector('meta[property="og:title"], meta[name="twitter:title"], meta[name="citation_title"]');
-            let title = titleNode?.textContent?.trim() || fallbackTitleNode?.content || document.title || 'Untitled';
-            let author = document.querySelector('meta[name="author"], meta[property="article:author"], meta[name="twitter:creator"]')?.content ||
-              document.querySelector('[rel="author"]')?.textContent ||
-              document.querySelector('a[rel~="author"]')?.textContent ||
-              document.querySelector('meta[name="byl"]')?.content ||
-              '';
-            let authorUrl = document.querySelector('meta[name="author"], meta[property="article:author"]')?.content || '';
-            const authorLink = document.querySelector('a[rel~="author"], a.author, a[href*="/authors/"], a[href*="/author/"], a[href*="/user/"], a[href*="/users/"]');
-            if (authorLink) {
-              author = author || authorLink.textContent;
-              authorUrl = authorLink.href;
-            }
-            if (host.includes('openlibrary.org')) {
-              const workTitle = document.querySelector('h1.work-title[itemprop="name"]');
-              if (workTitle) title = workTitle.textContent;
-              const link = document.querySelector('a[href*="/authors/"]');
-              if (link) { author = link.textContent; authorUrl = link.href; }
-            }
+
             if (host.includes('gutenberg.org')) {
-              const table = document.querySelector('table.bibrec#about_book_table');
-              if (table) {
-                const rows = [...table.querySelectorAll('tr')];
-                const titleRow = rows.find((row) => /^\s*Title\s*$/i.test(row.querySelector('th')?.textContent || ''));
-                const authorRow = rows.find((row) => /^\s*Author\s*$/i.test(row.querySelector('th')?.textContent || ''));
-                const titleCell = titleRow?.querySelector('td') || null;
-                const authorCell = authorRow?.querySelector('td') || null;
-                if (titleCell) title = titleCell.textContent || title;
-                if (authorCell) author = authorCell.textContent || author;
-              }
+              const result = extractGutenberg();
+              return { ...result, source: host, sourceId: parsedUrl.pathname.match(/\/ebooks\/(\d+)/i)?.[1] || host, url: base };
             }
-            const rawTitle = String(title).trim();
             if (host.includes('wattpad.com')) {
-              const storyTitle = document.querySelector('h1[data-testid="title"]') || document.querySelector('h1');
-              if (storyTitle) title = storyTitle.textContent;
-              const authorAnchor = document.querySelector('a[href*="/user/"]');
-              if (authorAnchor) author = authorAnchor.textContent;
-              if (!authorUrl && author) authorUrl = `https://www.wattpad.com/user/${encodeURIComponent(author)}`;
+              const result = extractWattpad();
+              return { ...result, source: host, sourceId: parsedUrl.pathname.match(/\/story\/(\d+)/i)?.[1] || host, url: base };
             }
             if (host.includes('archiveofourown.org')) {
-              const workTitle = document.querySelector('h2.title.heading');
-              if (workTitle) title = workTitle.textContent;
-              const link = document.querySelector('a[rel="author"]');
-              if (link) { author = link.textContent; authorUrl = link.href; }
-              const parts = String(title).replace(/\s*\[?Archive of Our Own\]?\s*$/i, '').split(' - ').map((part) => part.trim()).filter(Boolean);
-              if (!author && parts.length >= 2) {
-                author = parts[1];
-                authorUrl = `https://archiveofourown.org/users/${encodeURIComponent(author)}`;
-              }
-              if (parts.length >= 2) title = parts[0];
+              const result = extractAO3();
+              return { ...result, source: host, sourceId: parsedUrl.pathname.match(/\/works\/(\d+)/i)?.[1] || host, url: base };
             }
-            const cleanedTitle = String(title).replace(/\s*\[?Archive of Our Own\]?\s*$/i, '').trim();
-            const sourceId = parsedUrl.pathname.match(/\/books\/(OL\d+M)|\/ebooks\/(\d+)|\/works\/(\d+)|\/story\/(\d+)/i);
-            const summaryInfo = findSummary();
-            const summary = cleanText(summaryInfo.summary || '');
-            return {
-              title: cleanedTitle || rawTitle,
-              author: String(author).trim(),
-              authorUrl: String(authorUrl || '').trim(),
-              source: host,
-              sourceId: sourceId ? (sourceId[1] || sourceId[2] || sourceId[3] || sourceId[4]) : host,
-              url: String(base).trim(),
-              summary,
-            };
+            if (host.includes('openlibrary.org')) {
+              const result = extractOpenLibrary();
+              return { ...result, source: host, sourceId: parsedUrl.pathname.match(/\/books\/(OL\d+M)/i)?.[1] || host, url: base };
+            }
+
+            return { title: '', author: '', source: host, sourceId: host, url: base, summary: '' };
           } catch (error) {
-            return { title: '', author: '', source: '', url: String(window.location.href || ''), summary: '' };
+            return { title: '', author: '', source: '', sourceId: '', url: String(window.location.href || ''), summary: '' };
           }
         })();
         '''
@@ -347,6 +348,10 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
     app.setApplicationName("ArtVision")
-    window = ArtVisionWindow()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--path", default="/literatura", help="Ruta inicial de ArtVision")
+    args = parser.parse_args()
+
+    window = ArtVisionWindow(initial_path=args.path)
     window.show()
     sys.exit(app.exec())
