@@ -1,10 +1,8 @@
 """Open ArtVision and import the real links listed in books.txt."""
 
-import json
 import subprocess
 import sys
 from pathlib import Path
-from urllib.parse import quote
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -26,9 +24,11 @@ def main():
     if not urls:
         raise SystemExit("books.txt no contiene links http(s) válidos.")
 
-    path = "/literatura?import=" + quote(json.dumps(urls, ensure_ascii=False), safe="")
-    subprocess.Popen([sys.executable, str(APP), "--path", path], cwd=ROOT)
-    print(f"ArtVision abierto con {len(urls)} links de {BOOKS_FILE.name}.")
+    command = [sys.executable, str(APP), "--path", "/literatura"]
+    for url in urls:
+        command.extend(["--url", url])
+    subprocess.Popen(command, cwd=ROOT)
+    print(f"ArtVision abierto con {len(urls)} pestañas de {BOOKS_FILE.name}.")
 
 
 if __name__ == "__main__":

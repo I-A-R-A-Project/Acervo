@@ -46,6 +46,27 @@ function saveStoredGroups(groups) {
   }
 }
 
+function mergeImportedBook(groups, entry) {
+  let found = false
+  const next = groups.map((group) => ({
+    ...group,
+    items: group.items.map((item) => {
+      if (item.titleUrl !== entry.titleUrl) return item
+      found = true
+      return {
+        ...item,
+        ...entry,
+        id: item.id,
+        tags: [...new Set([...(item.tags || []), ...(entry.tags || [])])],
+      }
+    }),
+  }))
+  if (found) return next
+  return next.map((group) => group.id === 'poesia'
+    ? { ...group, items: [entry, ...group.items] }
+    : group)
+}
+
 function sourceIdForUrl(url) {
   try {
     const parsed = new URL(url)
@@ -53,6 +74,7 @@ function sourceIdForUrl(url) {
     const matches = [
       path.match(/\/books\/(OL\d+M)/i),
       path.match(/\/ebooks\/(\d+)/i),
+      path.match(/\/cache\/epub\/(\d+)/i),
       path.match(/\/works\/(\d+)/i),
       path.match(/\/story\/(\d+)/i),
     ]
@@ -298,6 +320,34 @@ export default function Literatura() {
     const handleBridgeMessage = (event) => {
       const payload = event?.data
       if (!payload || payload.type !== 'artvision-autofill') return
+      if (payload.autoSave) {
+        if (!payload.url || !payload.title) return
+        const parsed = new URL(payload.url)
+        const source = payload.source || parsed.hostname.replace(/^www\./i, '')
+        const sourceId = payload.sourceId || sourceIdForUrl(payload.url)
+        const summary = (payload.summary || '').trim()
+        const entry = {
+          id: `script-bookmark-${hashId(payload.url)}`,
+          title: payload.title || titleFromUrl(payload.url),
+          artist: payload.author || source,
+          sourceId,
+          titleUrl: payload.url,
+          authorUrl: payload.authorUrl || '',
+          medium: 'bookmark',
+          tags: ['bookmark', 'books.txt'],
+          license: 'unknown',
+          source: `${source} — ${sourceId}`,
+          saved: new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric' }),
+          summary,
+          notes: summary || `Imported from books.txt: ${payload.url}`,
+          importBatch: SCRIPT_IMPORT_BATCH,
+          capturedAt: new Date().toISOString(),
+          metadataComplete: Boolean(payload.title && payload.author && summary),
+        }
+        updateGroups((prev) => mergeImportedBook(prev, entry))
+        setActive('poesia')
+        return
+      }
       setForm((prev) => ({
         ...prev,
         url: payload.url || prev.url,
@@ -369,8 +419,11 @@ export default function Literatura() {
         license: 'unknown',
         source: `${source} — ${metadata?.sourceId || sourceIdForUrl(url)}`,
         saved: new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric' }),
+        summary: metadata?.summary || '',
         notes: metadata?.summary || `Imported from books.txt: ${url}`,
         importBatch: SCRIPT_IMPORT_BATCH,
+        capturedAt: new Date().toISOString(),
+        metadataComplete: Boolean(metadata?.title && metadata?.author && metadata?.summary),
       }
     })).then((entries) => {
       updateGroups((prev) => {

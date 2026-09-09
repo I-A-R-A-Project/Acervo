@@ -72,7 +72,7 @@ class ArtVisionHttpServer:
 
 
 class ArtVisionWindow(QMainWindow):
-    def __init__(self, initial_path="/literatura"):
+    def __init__(self, initial_path="/literatura", initial_urls=None):
         super().__init__()
         self.setWindowTitle("ArtVision")
         self.resize(1280, 820)
@@ -123,6 +123,8 @@ class ArtVisionWindow(QMainWindow):
             None,
         )
         self.tabs.setCurrentWidget(self.artvision_app_tab)
+        for url in initial_urls or []:
+            self.open_source_tab(url)
 
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -175,6 +177,21 @@ class ArtVisionWindow(QMainWindow):
     def new_blank_tab(self):
         self.new_tab("https://example.com", title="New tab")
 
+    def open_source_tab(self, url):
+        view = self.new_tab(url, title="Cargando...")
+        host = QUrl(url).host().lower()
+        wait_ms = 30000 if "archiveofourown.org" in host else 8000
+        view.loadFinished.connect(
+            lambda ok, current=view, delay=wait_ms: self._capture_after_delay(current, ok, delay),
+            type=Qt.ConnectionType.SingleShotConnection,
+        )
+        return view
+
+    def _capture_after_delay(self, view, ok, delay):
+        if not ok:
+            return
+        QTimer.singleShot(delay, lambda: self.capture_view(view, auto_save=True))
+
     def close_tab(self, index):
         if index == self.tabs.indexOf(self.artvision_app_tab) or self.tabs.count() <= 1:
             return
@@ -210,6 +227,11 @@ class ArtVisionWindow(QMainWindow):
         view = self.current_view()
         if view is None or view is self.artvision_app_tab:
             return
+        self.capture_view(view)
+
+    def capture_view(self, view, auto_save=False):
+        if view is None or view is self.artvision_app_tab:
+            return
 
         script = r'''
         (() => {
@@ -218,7 +240,14 @@ class ArtVisionWindow(QMainWindow):
 
           const extractGutenberg = () => {
             const table = document.querySelector('table.bibrec#about_book_table');
-            if (!table) return {};
+            if (!table) {
+              return {
+                title: cleanText(document.querySelector('h1')?.textContent || document.title)
+                  .replace(/\s*[|—-]\s*Project Gutenberg.*$/i, ''),
+                author: cleanText(document.querySelector('[itemprop="author"]')?.textContent || ''),
+                summary: cleanText(document.querySelector('meta[name="description"]')?.content || ''),
+              };
+            }
 
             const rows = [...table.querySelectorAll('tr')];
             const titleRow = rows.find((row) => /^\s*Title\s*$/i.test(row.querySelector('th')?.textContent || ''));
@@ -229,6 +258,7 @@ class ArtVisionWindow(QMainWindow):
             return {
               title,
               author,
+              authorUrl: authorRow?.querySelector('a')?.href || '',
               summary: summaryNode ? cleanText(stripHtml(summaryNode.innerHTML)) : '',
             };
           };
@@ -244,6 +274,7 @@ class ArtVisionWindow(QMainWindow):
             return {
               title: cleanText(titleNode?.textContent || ''),
               author: cleanText(authorNode?.textContent || ''),
+              authorUrl: authorNode?.href || '',
               summary,
             };
           };
@@ -254,6 +285,7 @@ class ArtVisionWindow(QMainWindow):
             return {
               title: cleanText(document.querySelector('h2.title.heading')?.textContent || ''),
               author: cleanText(authorNode?.textContent || ''),
+              authorUrl: authorNode?.href || '',
               summary: cleanText(stripHtml(summaryNode?.innerHTML || '')),
             };
           };
@@ -261,9 +293,22 @@ class ArtVisionWindow(QMainWindow):
           const extractOpenLibrary = () => {
             const summaryNode = document.querySelector('ol-read-more.book-description p');
             return {
-              title: cleanText(document.querySelector('h1.work-title[itemprop="name"]')?.textContent || ''),
-              author: cleanText(document.querySelector('a[href*="/authors/"]')?.textContent || ''),
-              summary: cleanText(stripHtml(summaryNode?.innerHTML || '')),
+              title: cleanText(
+                document.querySelector('h1.work-title[itemprop="name"]')?.textContent
+                || document.querySelector('h1')?.textContent
+                || document.title.replace(/\s*[|—-]\s*Open Library.*$/i, ''),
+              ),
+              author: cleanText(
+                document.querySelector('a[href*="/authors/"]')?.textContent
+                || document.querySelector('[itemprop="author"]')?.textContent
+                || '',
+              ),
+              authorUrl: document.querySelector('a[href*="/authors/"]')?.href || '',
+              summary: cleanText(
+                stripHtml(summaryNode?.innerHTML || '')
+                || document.querySelector('meta[name="description"]')?.content
+                || '',
+              ),
             };
           };
 
@@ -274,7 +319,8 @@ class ArtVisionWindow(QMainWindow):
 
             if (host.includes('gutenberg.org')) {
               const result = extractGutenberg();
-              return { ...result, source: host, sourceId: parsedUrl.pathname.match(/\/ebooks\/(\d+)/i)?.[1] || host, url: base };
+              const idMatch = parsedUrl.pathname.match(/\/ebooks\/(\d+)|\/cache\/epub\/(\d+)/i);
+              return { ...result, source: host, sourceId: idMatch?.[1] || idMatch?.[2] || host, url: base };
             }
             if (host.includes('wattpad.com')) {
               const result = extractWattpad();
@@ -308,7 +354,10 @@ class ArtVisionWindow(QMainWindow):
                 "sourceId": result.get("sourceId") or "",
                 "url": result.get("url") or "",
                 "summary": result.get("summary") or "",
+                "autoSave": auto_save,
             }
+            if auto_save and not payload["title"]:
+                return
             target_url = QUrl(f"{self.server.url.rstrip('/')}/literatura")
             def _dispatch_autofill():
                 payload_json = json.dumps(payload)
@@ -350,8 +399,9 @@ if __name__ == "__main__":
     app.setApplicationName("ArtVision")
     parser = argparse.ArgumentParser()
     parser.add_argument("--path", default="/literatura", help="Ruta inicial de ArtVision")
+    parser.add_argument("--url", action="append", default=[], help="URL externa para abrir en una pestaña")
     args = parser.parse_args()
 
-    window = ArtVisionWindow(initial_path=args.path)
+    window = ArtVisionWindow(initial_path=args.path, initial_urls=args.url)
     window.show()
     sys.exit(app.exec())
