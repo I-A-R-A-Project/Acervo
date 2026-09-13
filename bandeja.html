@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bandeja — pendientes de clasificar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --accent:#8FA0AE;
+    --accent-dim:rgba(143,160,174,0.15);
+    --bg-from:#0E1013;
+    --bg-to:#1A1E22;
+    --arte:#C98A5E;
+    --ciencia:#6FAF9E;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; }
+  body{
+    font-family:'Space Grotesk', sans-serif;
+    color:#EDEDED;
+    background:linear-gradient(160deg, var(--bg-from), var(--bg-to));
+    min-height:100%;
+  }
+  a{ color:inherit; }
+
+  .topbar{
+    display:flex; align-items:center; gap:18px;
+    padding:16px 24px;
+    border-bottom:1px solid rgba(255,255,255,0.08);
+    background:rgba(0,0,0,0.2);
+    flex-wrap:wrap;
+  }
+  .brand{ display:flex; align-items:baseline; gap:10px; }
+  .mark{ font-weight:700; font-size:16px; }
+  .room-title{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    color:var(--accent);
+  }
+  .topbar-meta{
+    margin-left:auto;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:rgba(255,255,255,0.5);
+  }
+
+  .filters{
+    display:flex; gap:8px; flex-wrap:wrap;
+    padding:18px 24px 0;
+  }
+  .chip{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    padding:6px 12px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,0.14);
+    background:rgba(255,255,255,0.04);
+    color:rgba(255,255,255,0.7);
+    cursor:pointer;
+    user-select:none;
+  }
+  .chip:hover{ border-color:rgba(255,255,255,0.3); }
+  .chip.active{
+    background:var(--accent-dim);
+    border-color:var(--accent);
+    color:#fff;
+  }
+
+  .toolbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 24px 8px;
+    gap:12px;
+  }
+  .toolbar h1{ font-size:20px; margin:0 0 4px; }
+  .toolbar p{ margin:0; font-size:13px; color:rgba(255,255,255,0.5); }
+  .accept-all{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.16);
+    color:#EDEDED;
+    padding:9px 14px;
+    border-radius:8px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .accept-all:hover{ border-color:var(--accent); }
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));
+    gap:12px;
+    padding:12px 24px 60px;
+  }
+
+  .pending-card{
+    background:rgba(255,255,255,0.05);
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:12px;
+    padding:14px 14px 12px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .pending-card:hover{ border-color:rgba(255,255,255,0.28); background:rgba(255,255,255,0.07); }
+
+  .card-top{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:8px;
+  }
+  .platform-tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    color:rgba(255,255,255,0.55);
+  }
+  .expiry{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    color:rgba(255,255,255,0.35);
+  }
+
+  .snippet{
+    font-size:13.5px;
+    line-height:1.45;
+    color:rgba(255,255,255,0.85);
+    display:-webkit-box;
+    -webkit-line-clamp:3;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+
+  .suggestion{
+    display:flex; align-items:center; gap:8px;
+    font-size:12px;
+    padding-top:6px;
+    border-top:1px solid rgba(255,255,255,0.08);
+  }
+  .suggestion .app-dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .suggestion .app-dot.arte{ background:var(--arte); }
+  .suggestion .app-dot.ciencia{ background:var(--ciencia); }
+  .suggestion .label{ color:rgba(255,255,255,0.65); flex:1; }
+  .confidence{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    color:var(--accent);
+  }
+
+  .actions{ display:flex; gap:6px; margin-top:2px; }
+  .actions button{
+    flex:1;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    padding:7px 6px;
+    border-radius:6px;
+    border:1px solid rgba(255,255,255,0.14);
+    background:rgba(255,255,255,0.03);
+    color:rgba(255,255,255,0.75);
+    cursor:pointer;
+  }
+  .actions button:hover{ border-color:var(--accent); color:#fff; }
+  .actions .discard:hover{ border-color:#C96A5E; color:#fff; }
+
+  /* drawer */
+  .scrim{
+    position:fixed; inset:0; background:rgba(0,0,0,0.55);
+    opacity:0; pointer-events:none; transition:opacity .25s ease; z-index:40;
+  }
+  .scrim.open{ opacity:1; pointer-events:auto; }
+  .drawer{
+    position:fixed; top:0; right:0; bottom:0;
+    width:min(440px, 92vw);
+    transform:translateX(100%);
+    transition:transform .32s cubic-bezier(.2,.8,.25,1);
+    z-index:41; display:flex; align-items:center; padding:24px;
+  }
+  .drawer.open{ transform:translateX(0); }
+  .detail-card{
+    position:relative;
+    background:#16171A;
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:14px;
+    padding:26px 22px;
+    width:100%;
+    max-height:calc(100vh - 48px);
+    overflow-y:auto;
+  }
+  .detail-card .close{
+    position:absolute; top:14px; right:14px;
+    background:none; border:none; color:rgba(255,255,255,0.6);
+    font-size:16px; cursor:pointer;
+  }
+  .detail-card .close:hover{ color:#fff; }
+  .detail-card .platform-tag{ margin-bottom:10px; display:block; }
+  .detail-card .full-text{
+    font-size:14.5px; line-height:1.6; color:rgba(255,255,255,0.85);
+    margin:10px 0 18px;
+  }
+  .field-row{
+    display:flex; gap:10px; font-size:13px; padding:7px 0;
+    border-bottom:1px solid rgba(255,255,255,0.06);
+    align-items:center;
+  }
+  .field-row .k{ width:90px; flex-shrink:0; color:rgba(255,255,255,0.45); }
+  .field-row select{
+    flex:1;
+    background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.14);
+    border-radius:6px;
+    color:#EDEDED;
+    font-family:inherit;
+    font-size:13px;
+    padding:6px 8px;
+  }
+  .detail-actions{ display:flex; gap:8px; margin-top:20px; }
+  .detail-actions button{
+    flex:1;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    padding:10px;
+    border-radius:8px;
+    border:1px solid rgba(255,255,255,0.16);
+    background:rgba(255,255,255,0.06);
+    color:#EDEDED;
+    cursor:pointer;
+  }
+  .detail-actions .primary{ background:var(--accent-dim); border-color:var(--accent); }
+  .detail-actions .discard:hover{ border-color:#C96A5E; }
+
+  @media(prefers-reduced-motion:reduce){ .drawer,.scrim{ transition:none; } }
+</style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="mark">Bandeja</span>
+      <span class="room-title">— pendientes de clasificar</span>
+    </div>
+    <div class="topbar-meta" id="countMeta"></div>
+  </header>
+
+  <div class="filters" id="filters"></div>
+
+  <div class="toolbar">
+    <div>
+      <h1>Sin clasificar</h1>
+      <p>Posts que el scraper no pudo ubicar con confianza en ArtVision o CienciaVision.</p>
+    </div>
+    <button class="accept-all" onclick="acceptAllHighConfidence()">Aceptar sugeridos ≥ 80%</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="scrim" id="scrim" onclick="closeDrawer()"></div>
+  <div class="drawer" id="drawer">
+    <div class="detail-card" id="detailCard"></div>
+  </div>
+
+<script>
+  const ITEMS = [
+    { id:'p1', platform:'Instagram', snippet:'Timelapse de una acuarela de amapolas, capa por capa hasta el resultado final.', suggestedApp:'arte', suggestedGroup:'Pintura', confidence:88, expiresIn:27 },
+    { id:'p2', platform:'X / Twitter', snippet:'Hilo explicando por qué Plutón dejó de considerarse planeta, con las tres condiciones de la UAI.', suggestedApp:'ciencia', suggestedGroup:'Astronomía · Sistema Solar', confidence:91, expiresIn:14 },
+    { id:'p3', platform:'Tumblr', snippet:'Fragmento de un poema sin autor citado sobre el mar en invierno.', suggestedApp:'arte', suggestedGroup:'Literatura', confidence:54, expiresIn:29 },
+    { id:'p4', platform:'Reddit', snippet:'Post de r/askscience sobre por qué el cielo nocturno es oscuro si hay infinitas estrellas (paradoja de Olbers).', suggestedApp:'ciencia', suggestedGroup:'Astronomía · Cosmología', confidence:76, expiresIn:20 },
+    { id:'p5', platform:'Instagram', snippet:'Foto de un asado con amigos, sin texto adicional.', suggestedApp:null, suggestedGroup:null, confidence:0, expiresIn:5 },
+    { id:'p6', platform:'X / Twitter', snippet:'Captura de un boceto de storyboard para un cortometraje de animación.', suggestedApp:'arte', suggestedGroup:'Cine', confidence:69, expiresIn:22 },
+    { id:'p7', platform:'Reddit', snippet:'r/chemistry: duda sobre por qué el mercurio es líquido a temperatura ambiente.', suggestedApp:'ciencia', suggestedGroup:'Química · Inorgánica', confidence:82, expiresIn:18 },
+    { id:'p8', platform:'Pinterest', snippet:'Tablero de referencias de composición fotográfica en blanco y negro.', suggestedApp:'arte', suggestedGroup:'Fotografía', confidence:73, expiresIn:25 },
+    { id:'p9', platform:'X / Twitter', snippet:'Meme sobre el lunes. Sin relación aparente con arte o ciencia.', suggestedApp:null, suggestedGroup:null, confidence:0, expiresIn:3 },
+    { id:'p10', platform:'Instagram', snippet:'Reel de un experimento casero de cristalización de sulfato de cobre.', suggestedApp:'ciencia', suggestedGroup:'Química · Fisicoquímica', confidence:85, expiresIn:24 },
+  ]
+
+  const GROUPS_BY_APP = {
+    arte: ['Literatura','Arquitectura','Escultura','Pintura','Música','Danza','Cine','Fotografía','Cómics','Videojuegos'],
+    ciencia: ['Física','Química','Biología','Astronomía','Ciencias de la Tierra','Matemática','Ciencias de la Computación','Medicina'],
+  }
+
+  let activeFilter = 'all'
+  let selected = null
+
+  const PLATFORMS = [...new Set(ITEMS.map(i => i.platform))]
+
+  function renderFilters(){
+    const filters = document.getElementById('filters')
+    const all = [{ id:'all', label:'Todas' }, ...PLATFORMS.map(p => ({ id:p, label:p }))]
+    filters.innerHTML = all.map(f =>
+      `<button class="chip ${f.id===activeFilter?'active':''}" onclick="setFilter('${f.id}')">${f.label}</button>`
+    ).join('')
+  }
+
+  function setFilter(id){ activeFilter = id; render() }
+
+  function visibleItems(){
+    return activeFilter === 'all' ? ITEMS : ITEMS.filter(i => i.platform === activeFilter)
+  }
+
+  function render(){
+    renderFilters()
+    document.getElementById('countMeta').textContent = `${ITEMS.length} en bandeja`
+    const grid = document.getElementById('grid')
+    grid.innerHTML = visibleItems().map(item => `
+      <div class="pending-card" onclick="openDrawer('${item.id}')">
+        <div class="card-top">
+          <span class="platform-tag">${item.platform}</span>
+          <span class="expiry">expira en ${item.expiresIn} d</span>
+        </div>
+        <div class="snippet">${item.snippet}</div>
+        ${item.suggestedApp ? `
+          <div class="suggestion">
+            <span class="app-dot ${item.suggestedApp}"></span>
+            <span class="label">${item.suggestedGroup}</span>
+            <span class="confidence">${item.confidence}%</span>
+          </div>
+        ` : `
+          <div class="suggestion"><span class="label" style="color:rgba(255,255,255,0.35)">sin sugerencia</span></div>
+        `}
+        <div class="actions" onclick="event.stopPropagation()">
+          ${item.suggestedApp ? `<button onclick="accept('${item.id}')">Aceptar</button>` : ''}
+          <button onclick="openDrawer('${item.id}')">Reasignar</button>
+          <button class="discard" onclick="discard('${item.id}')">Descartar</button>
+        </div>
+      </div>
+    `).join('') || `<p style="color:rgba(255,255,255,0.4); font-size:14px;">No hay posts pendientes con este filtro.</p>`
+  }
+
+  function openDrawer(id){
+    selected = ITEMS.find(i => i.id === id)
+    if (!selected) return
+    const options = ['arte','ciencia'].flatMap(app =>
+      GROUPS_BY_APP[app].map(g => `<option value="${app}::${g}" ${selected.suggestedApp===app && selected.suggestedGroup && selected.suggestedGroup.includes(g) ? 'selected' : ''}>${app==='arte'?'Arte':'Ciencia'} — ${g}</option>`)
+    ).join('')
+    document.getElementById('detailCard').innerHTML = `
+      <button class="close" onclick="closeDrawer()">✕</button>
+      <span class="platform-tag">${selected.platform}</span>
+      <div class="full-text">${selected.snippet}</div>
+      <div class="field-row">
+        <span class="k">Asignar a</span>
+        <select id="assignSelect">
+          <option value="">— elegir subclasificación —</option>
+          ${options}
+        </select>
+      </div>
+      <div class="field-row"><span class="k">Sugerido</span><span>${selected.suggestedGroup || 'sin sugerencia'} ${selected.confidence ? `(${selected.confidence}%)` : ''}</span></div>
+      <div class="field-row"><span class="k">Expira</span><span>en ${selected.expiresIn} días</span></div>
+      <div class="detail-actions">
+        <button class="primary" onclick="confirmAssign()">Guardar en catálogo</button>
+        <button class="discard" onclick="discard('${selected.id}')">Descartar</button>
+      </div>
+    `
+    document.getElementById('scrim').classList.add('open')
+    document.getElementById('drawer').classList.add('open')
+  }
+
+  function closeDrawer(){
+    document.getElementById('scrim').classList.remove('open')
+    document.getElementById('drawer').classList.remove('open')
+  }
+
+  function removeItem(id){
+    const idx = ITEMS.findIndex(i => i.id === id)
+    if (idx >= 0) ITEMS.splice(idx, 1)
+    closeDrawer()
+    render()
+  }
+
+  function accept(id){ removeItem(id) }
+  function discard(id){ removeItem(id) }
+  function confirmAssign(){ if (selected) removeItem(selected.id) }
+  function acceptAllHighConfidence(){
+    for (let i = ITEMS.length - 1; i >= 0; i--) {
+      if (ITEMS[i].confidence >= 80) ITEMS.splice(i, 1)
+    }
+    render()
+  }
+
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer() })
+
+  render()
+</script>
+</body>
+</html>

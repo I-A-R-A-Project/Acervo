@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useArchiveFilter } from '../hooks/useArchiveFilter.js'
 import { hashId } from '../hooks/hashId.js'
@@ -12,6 +12,7 @@ const SPINE_COLORS = ['forest', 'burgundy', 'navy', 'mustard', 'plum']
 const COLOR_VARS = { forest: 'var(--forest)', burgundy: 'var(--burgundy)', navy: 'var(--navy)', mustard: 'var(--mustard)', plum: 'var(--plum)' }
 
 const STORAGE_KEY = 'artvision-literatura-groups'
+const SCRIPT_IMPORT_BATCH = 'books.txt-script'
 
 const EMPTY_GROUPS = [
   { id: 'poesia', label: 'Poetry', items: [] },
@@ -26,13 +27,97 @@ function loadStoredGroups() {
     if (!raw) return EMPTY_GROUPS
     const parsed = JSON.parse(raw)
     if (!Array.isArray(parsed) || !parsed.length) return EMPTY_GROUPS
-    return parsed.map((group) => ({
+    return deduplicateGroups(parsed.map((group) => ({
       ...group,
-      items: group.items.filter((item) => !/^lit-\d+$/.test(item.id)),
-    }))
+      items: Array.isArray(group.items)
+        ? group.items.filter((item) => !/^lit-\d+$/.test(item.id))
+        : [],
+    })))
   } catch {
     return EMPTY_GROUPS
   }
+}
+
+function saveStoredGroups(groups) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(groups))
+  } catch (error) {
+    console.error('Could not save the literature catalog', error)
+  }
+}
+
+function sourceKey(book) {
+  let source = String(book.source || '').split(' — ')[0].toLowerCase().replace(/^www\./, '')
+  try {
+    source = new URL(book.titleUrl).hostname.toLowerCase().replace(/^www\./, '')
+  } catch {
+    // Keep the stored source when an older manual entry has no valid URL.
+  }
+  const sourceId = String(book.sourceId || '').trim().toLowerCase()
+  if (source && sourceId && !['manual', source].includes(sourceId)) {
+    return `${source}:${sourceId}`
+  }
+  return book.titleUrl || book.id
+}
+
+function preferBook(current, incoming) {
+  const currentScore = Number(Boolean(current.metadataComplete)) * 2
+    + Number(Boolean(current.summary)) + Number(Boolean(current.author))
+  const incomingScore = Number(Boolean(incoming.metadataComplete)) * 2
+    + Number(Boolean(incoming.summary)) + Number(Boolean(incoming.author))
+  return incomingScore > currentScore ? incoming : current
+}
+
+function deduplicateGroups(groups) {
+  const seen = new Map()
+  groups.forEach((group) => {
+    group.items.forEach((item) => {
+      const key = sourceKey(item)
+      const previous = seen.get(key)
+      if (!previous) {
+        seen.set(key, { groupId: group.id, item })
+        return
+      }
+      seen.set(key, {
+        groupId: group.id,
+        item: preferBook(previous.item, item),
+      })
+    })
+  })
+
+  return groups.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => {
+      const record = seen.get(sourceKey(item))
+      return record?.groupId === group.id && record.item === item
+    }).map((item) => {
+      const record = seen.get(sourceKey(item))
+      return record.item
+    }),
+  }))
+}
+
+function mergeImportedBook(groups, entry) {
+  const entryKey = sourceKey(entry)
+  let found = false
+  const next = groups.map((group) => ({
+    ...group,
+    items: group.items.map((item) => {
+      if (sourceKey(item) !== entryKey) return item
+      found = true
+      const preferred = preferBook(item, entry)
+      return {
+        ...item,
+        ...preferred,
+        id: item.id,
+        tags: [...new Set([...(item.tags || []), ...(entry.tags || [])])],
+      }
+    }),
+  }))
+  if (found) return deduplicateGroups(next)
+  return deduplicateGroups(next.map((group) => group.id === 'poesia'
+    ? { ...group, items: [entry, ...group.items] }
+    : group))
 }
 
 function sourceIdForUrl(url) {
@@ -42,6 +127,7 @@ function sourceIdForUrl(url) {
     const matches = [
       path.match(/\/books\/(OL\d+M)/i),
       path.match(/\/ebooks\/(\d+)/i),
+      path.match(/\/cache\/epub\/(\d+)/i),
       path.match(/\/works\/(\d+)/i),
       path.match(/\/story\/(\d+)/i),
     ]
@@ -49,6 +135,16 @@ function sourceIdForUrl(url) {
     return match ? match[1] : parsed.hostname.replace(/^www\./i, '')
   } catch {
     return 'manual'
+  }
+}
+
+function titleFromUrl(url) {
+  try {
+    const parsed = new URL(url)
+    const slug = parsed.pathname.split('/').filter(Boolean).pop() || parsed.hostname
+    return decodeURIComponent(slug).replace(/[-_]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+  } catch {
+    return url
   }
 }
 
@@ -253,10 +349,20 @@ export default function Literatura() {
   const [groups, setGroups] = useState(() => loadStoredGroups())
   const [form, setForm] = useState({ url: '', title: '', author: '', summary: '', source: '', sourceId: '', titleUrl: '', authorUrl: '', shelf: 'poesia' })
   const [fetching, setFetching] = useState(false)
+  const handledImport = useRef(false)
+  const { active, setActive, query, setQuery, visibleGroups, visibleCount, totalCount, countsByGroup } = useArchiveFilter(groups)
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(groups))
+    saveStoredGroups(groups)
   }, [groups])
+
+  function updateGroups(updater) {
+    setGroups((prev) => {
+      const next = updater(prev)
+      saveStoredGroups(next)
+      return next
+    })
+  }
 
   useEffect(() => {
     const link = document.createElement('link')
@@ -267,6 +373,34 @@ export default function Literatura() {
     const handleBridgeMessage = (event) => {
       const payload = event?.data
       if (!payload || payload.type !== 'artvision-autofill') return
+      if (payload.autoSave) {
+        if (!payload.url || !payload.title) return
+        const parsed = new URL(payload.url)
+        const source = payload.source || parsed.hostname.replace(/^www\./i, '')
+        const sourceId = payload.sourceId || sourceIdForUrl(payload.url)
+        const summary = (payload.summary || '').trim()
+        const entry = {
+          id: `script-bookmark-${hashId(payload.url)}`,
+          title: payload.title || titleFromUrl(payload.url),
+          artist: payload.author || source,
+          sourceId,
+          titleUrl: payload.url,
+          authorUrl: payload.authorUrl || '',
+          medium: 'bookmark',
+          tags: ['bookmark', 'books.txt'],
+          license: 'unknown',
+          source: `${source} — ${sourceId}`,
+          saved: new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric' }),
+          summary,
+          notes: summary || `Imported from books.txt: ${payload.url}`,
+          importBatch: SCRIPT_IMPORT_BATCH,
+          capturedAt: new Date().toISOString(),
+          metadataComplete: Boolean(payload.title && payload.author && summary),
+        }
+        updateGroups((prev) => mergeImportedBook(prev, entry))
+        setActive('poesia')
+        return
+      }
       setForm((prev) => ({
         ...prev,
         url: payload.url || prev.url,
@@ -287,7 +421,69 @@ export default function Literatura() {
     }
   }, [])
 
-  const { active, setActive, query, setQuery, visibleGroups, visibleCount, totalCount, countsByGroup } = useArchiveFilter(groups)
+  useEffect(() => {
+    if (handledImport.current) return
+    handledImport.current = true
+
+    const params = new URLSearchParams(window.location.search)
+    const encodedUrls = params.get('import')
+    const removeImported = params.get('removeImported') === '1'
+
+    if (removeImported) {
+      updateGroups((prev) => prev.map((group) => ({
+        ...group,
+        items: group.items.filter((book) => book.importBatch !== SCRIPT_IMPORT_BATCH),
+      })))
+      return
+    }
+
+    if (!encodedUrls) return
+
+    let urls
+    try {
+      urls = JSON.parse(encodedUrls)
+    } catch {
+      return
+    }
+
+    if (!Array.isArray(urls)) return
+    const validUrls = [...new Set(urls.filter((url) => {
+      try {
+        const parsed = new URL(url)
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+      } catch {
+        return false
+      }
+    }))]
+
+    Promise.all(validUrls.map(async (url) => {
+      const metadata = await fetchMetadataFromUrl(url)
+      const parsed = new URL(url)
+      const source = metadata?.source || parsed.hostname.replace(/^www\./i, '')
+      return {
+        id: `script-bookmark-${hashId(url)}`,
+        title: metadata?.title || titleFromUrl(url),
+        artist: metadata?.author || source,
+        sourceId: metadata?.sourceId || sourceIdForUrl(url),
+        titleUrl: url,
+        authorUrl: metadata?.authorUrl || '',
+        medium: 'bookmark',
+        tags: ['bookmark', 'books.txt'],
+        license: 'unknown',
+        source: `${source} — ${metadata?.sourceId || sourceIdForUrl(url)}`,
+        saved: new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric' }),
+        summary: metadata?.summary || '',
+        notes: metadata?.summary || `Imported from books.txt: ${url}`,
+        importBatch: SCRIPT_IMPORT_BATCH,
+        capturedAt: new Date().toISOString(),
+        metadataComplete: Boolean(metadata?.title && metadata?.author && metadata?.summary),
+      }
+    })).then((entries) => {
+      updateGroups((prev) => entries.reduce((next, entry) => mergeImportedBook(next, entry), prev))
+      setActive('poesia')
+    })
+  }, [setActive])
+
   const [selected, setSelected] = useState(null)
   const open = !!selected
 
@@ -351,13 +547,13 @@ export default function Literatura() {
       notes: summary,
     }
 
-    setGroups((prev) => prev.map((group) => group.id === shelfId ? { ...group, items: [newEntry, ...group.items] } : group))
+    updateGroups((prev) => prev.map((group) => group.id === shelfId ? { ...group, items: [newEntry, ...group.items] } : group))
     setForm({ url: '', title: '', author: '', summary: '', source: '', sourceId: '', titleUrl: '', authorUrl: '', shelf: shelfId })
     setActive(shelfId)
   }
 
   function removeBook(bookId) {
-    setGroups((prev) => prev.map((group) => ({
+    updateGroups((prev) => prev.map((group) => ({
       ...group,
       items: group.items.filter((book) => book.id !== bookId),
     })))

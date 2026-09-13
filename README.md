@@ -1,240 +1,204 @@
-# ArtVision
+# Acervo
 
-ArtVision es un concepto para un espacio de descubrimiento y publicación de arte.
-La idea es recolectar obras desde múltiples fuentes web, revisarlas en una app
-clara de escritorio, organizar colecciones y ayudar a un artista a publicar la
-misma obra en varias redes sociales sin repetir trabajo manual.
+Acervo es un programa de escritorio para descubrir, guardar y organizar
+referencias — de arte y de ciencia — en un mismo lugar, con la posibilidad
+de sumar automáticamente lo que aparece mientras navegás redes sociales, sin
+perder el control manual de qué entra a la colección.
 
 ## Idea central
 
-Esta app debe funcionar como un hub visual de investigación y publicación para
-creadores. Un usuario podría:
-- navegar arte desde varias fuentes en un solo lugar
-- guardar piezas en colecciones y moodboards
-- revisar metadatos, tags, fuentes y contexto de licencia
-- comparar piezas por estilo, medio y tema
-- programar o publicar una pieza en varias redes a la vez
-- mantener un archivo de referencias y portfolio personal
+El usuario navega por internet y por redes sociales de todos modos. Acervo
+no reemplaza esa navegación: la acompaña, capturando lo que vale la pena
+guardar y ordenándolo solo, en la medida de lo posible, para que después sea
+fácil de volver a encontrar. Lo que no puede ordenar solo, lo deja en una
+bandeja para que la persona decida.
 
-## Las 10 bellas artes
+Tres formas de que algo entre a Acervo:
 
-* Arquitectura: Diseño artístico de espacios habitables y monumentales.
-* Escultura: Modelado de volúmenes en materiales sólidos.
-* Pintura: Representación gráfica mediante pigmentos y lienzos.
-* Música: Composición sonora expresiva en el tiempo.
-* Literatura: Expresión estética por medio del lenguaje escrito.
-* Danza: Movimiento corporal rítmico con fines artísticos.
-* Cine: Narración visual y auditiva mediante metrajes.
-* Fotografía: Captura estética de la luz y la realidad.
-* Cómics: Narración secuencial mediante dibujos y viñetas.
-* Videojuegos: Capacidad de mezclar disciplinas anteriores con la participación activa del jugador.
-
-Esta lista sirve como marco para categorías de contenido, tags, colecciones y
-flujo editorial dentro de la app.
+1. **Manual** — pegar una URL o cargar un ítem a mano, como ya funciona hoy
+   en la sala de Literatura.
+2. **Bandeja** — un scraping lento y no autónomo de redes sociales que
+   propone una sala y subclasificación con un porcentaje de confianza; la
+   persona acepta, reasigna o descarta.
+3. **Social** — posts de amigos y conocidos, que no se intentan encajar en
+   ninguna sala de arte o ciencia porque no son ese tipo de contenido; viven
+   en su propio feed, agrupados por persona, con espacio para notas.
 
 ## Usuario objetivo
 
-Usuario principal: personas que consumen arte, coleccionan referencias,
-exploran inspiración visual y también pueden crear o publicar contenido.
-Incluye artistas, ilustradores, concept artists, fotógrafos, diseñadores,
-creadores digitales, curadores, comunidad de fanart y usuarios que simplemente
-gustan de explorar arte y guardar ideas.
+Personas que consumen arte y ciencia, coleccionan referencias, exploran
+inspiración o simplemente quieren guardar y volver a encontrar cosas que
+vieron. Incluye artistas, ilustradores, concept artists, fotógrafos,
+diseñadores, creadores digitales, curadores, estudiantes, gente que sigue de
+cerca alguna rama de la ciencia por interés propio, y usuarios que
+simplemente disfrutan explorar y guardar ideas sin ser profesionales de
+nada de esto.
 
-La app debe ayudarlo a:
-- recopilar inspiración desde varios sitios web
-- construir tableros y bibliotecas de referencia
-- generar captions y variantes de publicación
-- publicar la misma obra en varias redes
-- llevar seguimiento del portfolio y campañas sociales
-- guardar arte de interés personal sin necesidad de ser artista profesional
+Acervo debe ayudarlo a:
+- recopilar inspiración y referencias desde varias fuentes
+- construir tableros y bibliotecas de referencia, tanto de arte como de
+  ciencia
+- llevar un archivo personal navegable, sin depender de los buscadores
+  internos de cada red o sitio
+- guardar contenido de interés sin necesidad de ser artista o científico
+  profesional
+- eventualmente, generar variantes de publicación para arte propio (ver
+  "Capa de publicación" más abajo)
+
+## Las secciones
+
+- **[Salas de Artes](./Salas%20de%20Artes.md)** — las diez bellas artes,
+  cada una con su propia metáfora visual y ficha de detalle.
+- **[Salas de Ciencia](./Salas%20de%20Ciencia.md)** — ocho ramas de la
+  ciencia, cada una con sus propias subclasificaciones.
+- **Bandeja** — posts que el scraping no pudo ubicar con confianza en
+  ninguna sala; triage manual con aceptar / reasignar / descartar.
+- **Social** — posts de amigos y conocidos, separados de los catálogos de
+  arte y ciencia.
 
 ## Forma del producto
 
 ### 1. Capa de descubrimiento
 
-La app reúne arte desde varias fuentes como:
-- Behance
-- ArtStation
-- Dribbble
-- DeviantArt
-- Unsplash
-- Wikimedia Commons
-- Pinterest
-- museos y galerías
-- portfolios de artistas curados
-- feeds RSS y JSON de blogs y publicaciones
+Acervo reúne referencias desde varias fuentes, según la sala:
+
+- **Arte**: Behance, ArtStation, Dribbble, DeviantArt, Unsplash, Wikimedia
+  Commons, Pinterest, museos y galerías, portfolios de artistas curados,
+  feeds RSS/JSON de blogs y publicaciones.
+- **Ciencia**: Wikipedia, repositorios de artículos de divulgación,
+  Wikimedia Commons, canales y blogs de divulgación científica, feeds
+  RSS/JSON de revistas y medios especializados.
+- **Redes sociales** (vía Bandeja y Social): Instagram, X/Twitter, Reddit,
+  Tumblr, Pinterest — con scraping lento y no autónomo, respetando las
+  políticas de cada plataforma.
 
 ### 2. Capa de colecciones
 
-Los usuarios pueden crear tableros como:
+Dentro de cada sala, y también cruzando salas, el usuario puede armar
+tableros como:
 - inspiración
-- portfolio personal
-- referencias de campaña
-- estudios por medio
-- moodboards por color o tema
-- conceptos listos para cliente
+- referencias de un proyecto o campaña
+- estudios por medio o por subclasificación
+- moodboards por color, tema o nivel de dificultad (en ciencia)
+- ítems listos para retomar o profundizar
 
 ### 3. Capa de visor
 
-Un visor centrado en media debe soportar:
-- miniaturas e imágenes a tamaño completo
-- zoom y recorte para obras
-- overlays de metadata
-- notas y tags
+Un visor centrado en el contenido de cada ítem debe soportar:
+- miniaturas y vista a tamaño completo
+- zoom y recorte para imágenes
+- overlays de metadata (fuente, licencia, tags)
+- notas personales por ítem
 - comparación lado a lado
-- manejo de arte local y remoto
+- manejo de contenido guardado local y remoto
 
 ### 4. Capa de publicación
 
-Esta es la parte productiva para artistas. La app debe permitir publicar la
-misma obra en varios canales, por ejemplo:
-- Instagram
-- Threads
-- X / Twitter
-- Pinterest
-- Facebook
-- LinkedIn
-- Behance
-- Bluesky
-- TikTok
-- YouTube Shorts
+Para las Salas de Artes en particular, Acervo debería permitir que un
+artista publique su propia obra en varias redes a la vez, sin repetir el
+trabajo de subirla manualmente a cada una:
 
-Cada red debe tener un adaptador propio con:
-- generación de draft
+- Instagram, Threads, X/Twitter, Pinterest, Facebook, LinkedIn, Behance,
+  Bluesky, TikTok, YouTube Shorts
+
+Cada red necesitaría un adaptador propio con:
+- generación de borrador (draft)
 - plantillas de título y caption
-- reglas de tamaño/formato
+- reglas de tamaño/formato por plataforma
 - campos de alt text y descripción
-- programación de publicación
-- cola y reintentos
+- programación de publicación, cola y reintentos
+- estado por plataforma: draft, queued, scheduled, published, failed, retry
+  pending
 
-## Arquitectura MVP
+Esta capa es la única pensada para *publicar* en vez de *coleccionar* —
+conviene tratarla como una sección aparte, separada de las salas de
+descubrimiento.
+
+### Estrategia de ingesta de fuentes
+
+Varias estrategias conviven, y los datos deben normalizarse al modelo común
+antes de entrar a cualquier sala:
+- crawling directo desde páginas públicas, respetando robots.txt y ToS
+- ingesta por RSS
+- adaptadores de API para plataformas soportadas
+- import manual por parte del usuario
+- scraping lento de redes sociales (Bandeja y Social)
+
+## Arquitectura propuesta
 
 ```text
-ArtVision/
-├── app/                     # shell principal de la app
-├── discovery/               # crawlers y adapters por fuente
-├── models/                  # esquema de metadatos del arte
+Acervo/
+├── app/                     # shell principal de la app de escritorio
+├── salas-arte/              # las 10 salas de arte (una por disciplina)
+├── salas-ciencia/           # las 8 salas de ciencia (una por disciplina)
+├── bandeja/                 # triage de posts sin clasificar
+├── social/                  # feed de posts de amigos y conocidos
+├── discovery/               # scraping lento de redes + adapters por fuente
+├── models/                  # esquema de metadatos común a todos los ítems
 ├── storage/                 # SQLite / JSON local
-├── viewer/                  # galería, visor y tableros
-├── publisher/               # orquestación de cross-post
-├── social/                  # adapters de redes
-├── scheduler/               # posts programados y drafts
-├── ui/                      # capa UI de escritorio
-├── README.md                # plan del producto
-└── roadmap.md               # milestones inmediatos
+├── viewer/                  # galería, visor y fichas de detalle compartidas
+├── publishing/              # adapters de publicación cruzada (capa 4, obra propia)
+├── ui/                      # componentes UI compartidos (drawer, shelf list, filtros)
+├── README.md                # este archivo
+├── Salas de Artes.md
+├── Salas de Ciencia.md
+└── roadmap.md
 ```
 
-## Modelo de datos central
+`salas-arte` y `salas-ciencia` reutilizan los mismos componentes de `ui/`
+(la lista de subclasificaciones, el panel de detalle, el buscador) en vez de
+duplicar la lógica por disciplina — ya es así en los prototipos actuales de
+ambas. `publishing/` queda separado de `social/` a propósito: `social/` es
+el feed de amigos y conocidos (consumo), `publishing/` son los adapters
+para subir obra propia (producción).
 
-Cada pieza debe normalizarse a un esquema común como:
+## Modelo de datos común
+
+Todo ítem, sin importar de qué sala o sección venga, se normaliza a un
+esquema compartido antes de guardarse:
 
 ```json
 {
   "id": "source:slug-or-uuid",
-  "title": "Moonlit study",
-  "artist": "Ari Vega",
-  "medium": "digital painting",
-  "category": "painting",
-  "source_url": "https://example.com/art/123",
-  "image_url": "https://example.com/images/123.jpg",
-  "tags": ["portrait", "atmospheric", "concept art"],
-  "license": "unknown",
-  "notes": "Reference for the new series",
-  "saved_at": "2026-08-29T00:00:00Z"
+  "title": "...",
+  "origin": "manual | bandeja | social",
+  "room": "arte:pintura | ciencia:astronomia | null",
+  "subclassification": "...",
+  "source": "autor, publicación o plataforma",
+  "source_url": "https://...",
+  "type": "obra | concepto | experimento | articulo | video | post",
+  "tags": ["..."],
+  "license": "CC BY 4.0 | unknown | ...",
+  "notes": "",
+  "saved_at": "2026-09-13T00:00:00Z"
 }
 ```
 
-Esto permite mezclar fuentes sin romper el visor ni el sistema de publicación.
-
-## Estrategia de ingesta de fuentes
-
-La plataforma debería soportar varias estrategias de colección:
-- crawling directo desde páginas públicas
-- ingesta por RSS
-- adapters de API para plataformas soportadas
-- import manual por parte del usuario
-- bookmarklet o extensión para capturar rápido
-
-Regla: los datos recolectados deben normalizarse antes de entrar a la librería.
-
-## Roadmap recomendado
-
-### Fase 1: biblioteca de investigación
-- lista de fuentes y adapters
-- guardar imagen + metadata
-- tags y colecciones
-- visor local
-- búsqueda por título, artista, medio y tag
-
-### Fase 2: workspace para creadores
-- creación de tableros
-- comparación lado a lado
-- notas y comentarios
-- exportación de referencias y moodboards
-- links guardados con atribución de fuente
-
-### Fase 3: publicación social
-- sistema de adapters por plataforma
-- plantillas de captions
-- publicación programada
-- variantes por red
-- flujo de aprobación de contenido
-
-### Fase 4: automatización de portfolio
-- mini-páginas automáticas de portfolio
-- calendario de publicaciones
-- resumenes de analítica
-- seguimiento de piezas mejor rankeadas
-
-## Diseño de publicación social
-
-Cada plataforma debe definir:
-- tipos de media aceptados
-- reglas de formato/aspect ratio
-- máximo de caption
-- metadata requerida
-- manejo de login/sesión
-- permisos de publicación
-
-Adaptadores ejemplo:
-- Instagram API / Graph API wrapper
-- cliente de X API
-- adaptador de Pinterest API
-- integración de LinkedIn
-- soporte para Bluesky o Mastodon
-- soporte para portfolio en Behance
-
-La app debe poner posts en cola y conservar un estado por plataforma:
-- draft
-- queued
-- scheduled
-- published
-- failed
-- retry pending
+`room` queda en `null` para los ítems que caen en Social, ya que
+deliberadamente no se clasifican como arte o ciencia.
 
 ## Modelo UX
 
-Un layout útil de escritorio sería:
-- sidebar izquierda: fuentes, colecciones y tableros
-- centro: feed o grilla de galería
-- panel derecho: metadata de la obra y acciones de publicación
-- dock inferior: cola de posts activos
+Un layout de escritorio útil, compartido por las salas:
+- sidebar izquierda: subclasificaciones (o, en el caso de Social,
+  personas) y colecciones
+- centro: grilla o feed de ítems
+- panel derecho (drawer): ficha de detalle del ítem seleccionado y sus
+  acciones
+- dock inferior, solo en la capa de publicación: cola de posts activos
 
-Esto mantiene la app útil tanto para investigación como para publicación.
+## Guardrails
 
-## Riesgos y guardrails
+- El scraping de redes sociales es lento y no completamente autónomo, para
+  no infringir las políticas de las plataformas ni disparar sus sistemas
+  anti-bot.
+- La licencia y la fuente de cada ítem de arte deben quedar registradas,
+  aunque sea como "unknown", para no perder la atribución con el tiempo.
+- El scraping y crawling directo debe respetar robots.txt y los términos de
+  servicio de cada fuente.
+- No debe publicarse nada en ninguna red sin aprobación explícita del
+  usuario, ítem por ítem y red por red.
+- Las credenciales de API se guardan en una configuración local segura,
+  nunca en el repositorio.
 
-- la licencia y atribución deben ser claras
-- el scraping debe respetar robots.txt y TOS
-- no debe publicarse nada sin aprobación del usuario por cada red
-- guardar credenciales de API en una config local segura, no en el repo
-
-## Recomendación
-
-Construir esto como una app desktop con una capa sólida de metadata y
-adaptadores flexibles por fuente. Lo importante no es solo recolectar arte,
-sino normalizarlo en una librería reutilizable que pueda alimentar tanto el
-visor como el pipeline de publicación.
-
-Esto le da a IARA una línea creativa real: descubrimiento visual,
-recolección y distribución multi-plataforma para artistas.
+El plan de fases para construir todo esto vive en [roadmap.md](./roadmap.md).
