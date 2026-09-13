@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Social — posts de amigos y conocidos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --accent:#E0937C;
+    --accent-dim:rgba(224,147,124,0.15);
+    --bg-from:#0E1013;
+    --bg-to:#1E1613;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; }
+  body{
+    font-family:'Space Grotesk', sans-serif;
+    color:#EDEDED;
+    background:linear-gradient(160deg, var(--bg-from), var(--bg-to));
+    min-height:100%;
+  }
+  a{ color:inherit; }
+
+  .app{
+    display:grid;
+    grid-template-columns:260px 1fr;
+    grid-template-rows:auto 1fr;
+    min-height:100vh;
+  }
+
+  .topbar{
+    grid-column:1 / -1;
+    display:flex; align-items:center; gap:18px;
+    padding:16px 24px;
+    border-bottom:1px solid rgba(255,255,255,0.08);
+    background:rgba(0,0,0,0.2);
+  }
+  .brand{ display:flex; align-items:baseline; gap:10px; }
+  .mark{ font-weight:700; font-size:16px; }
+  .room-title{ font-family:'IBM Plex Mono', monospace; font-size:12.5px; color:var(--accent); }
+  .topbar-meta{ margin-left:auto; font-family:'IBM Plex Mono', monospace; font-size:12px; color:rgba(255,255,255,0.5); }
+
+  .sidebar{
+    padding:20px 16px;
+    border-right:1px solid rgba(255,255,255,0.08);
+    background:rgba(0,0,0,0.15);
+  }
+  .sidebar input{
+    width:100%;
+    background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.12);
+    border-radius:8px;
+    padding:8px 10px;
+    color:#EDEDED;
+    font-family:inherit;
+    font-size:13.5px;
+    margin-bottom:16px;
+  }
+  .sidebar input:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+
+  .people-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
+  .people-list button{
+    width:100%;
+    display:flex; align-items:center; gap:10px;
+    background:none; border:none; text-align:left;
+    color:rgba(255,255,255,0.85);
+    font-family:inherit; font-size:13.5px;
+    padding:9px 8px; border-radius:8px; cursor:pointer;
+  }
+  .people-list button:hover{ background:rgba(255,255,255,0.06); }
+  .people-list button[aria-pressed="true"]{ background:rgba(255,255,255,0.1); color:#fff; }
+  .avatar{
+    width:28px; height:28px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'IBM Plex Mono', monospace; font-size:11px; font-weight:600;
+    color:#16171A; flex-shrink:0;
+  }
+  .person-meta{ flex:1; min-width:0; }
+  .person-name{ display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .person-tag{ display:block; font-size:11px; color:rgba(255,255,255,0.4); }
+  .person-count{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:rgba(255,255,255,0.4); }
+
+  .main{ padding:26px 28px 60px; overflow-y:auto; }
+  .main-heading{ margin-bottom:20px; }
+  .main-heading h1{ font-size:22px; margin:0 0 6px; }
+  .main-heading p{ margin:0; font-size:13px; color:rgba(255,255,255,0.5); }
+
+  .feed{ display:flex; flex-direction:column; gap:12px; max-width:640px; }
+  .post-card{
+    background:rgba(255,255,255,0.05);
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:12px;
+    padding:16px 16px 14px;
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .post-card:hover{ border-color:rgba(255,255,255,0.28); background:rgba(255,255,255,0.07); }
+  .post-top{
+    display:flex; align-items:center; gap:8px;
+    font-size:12.5px; color:rgba(255,255,255,0.6);
+    margin-bottom:8px;
+  }
+  .post-top .who{ font-weight:600; color:#EDEDED; }
+  .post-top .dot{ opacity:0.4; }
+  .post-top .platform{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--accent); }
+  .post-top .date{ margin-left:auto; font-family:'IBM Plex Mono', monospace; font-size:11px; color:rgba(255,255,255,0.35); }
+  .post-text{ font-size:14px; line-height:1.5; color:rgba(255,255,255,0.85); }
+  .post-note{
+    margin-top:10px; padding-top:8px;
+    border-top:1px solid rgba(255,255,255,0.08);
+    font-size:12.5px; color:rgba(255,255,255,0.5);
+    font-style:italic;
+  }
+
+  .empty-state{ color:rgba(255,255,255,0.4); font-size:14px; }
+
+  /* drawer */
+  .scrim{
+    position:fixed; inset:0; background:rgba(0,0,0,0.55);
+    opacity:0; pointer-events:none; transition:opacity .25s ease; z-index:40;
+  }
+  .scrim.open{ opacity:1; pointer-events:auto; }
+  .drawer{
+    position:fixed; top:0; right:0; bottom:0;
+    width:min(440px, 92vw);
+    transform:translateX(100%);
+    transition:transform .32s cubic-bezier(.2,.8,.25,1);
+    z-index:41; display:flex; align-items:center; padding:24px;
+  }
+  .drawer.open{ transform:translateX(0); }
+  .detail-card{
+    position:relative; background:#16171A;
+    border:1px solid rgba(255,255,255,0.1); border-radius:14px;
+    padding:26px 22px; width:100%;
+    max-height:calc(100vh - 48px); overflow-y:auto;
+  }
+  .detail-card .close{
+    position:absolute; top:14px; right:14px;
+    background:none; border:none; color:rgba(255,255,255,0.6);
+    font-size:16px; cursor:pointer;
+  }
+  .detail-card .close:hover{ color:#fff; }
+  .detail-card .full-text{ font-size:15px; line-height:1.6; color:rgba(255,255,255,0.9); margin:14px 0 18px; }
+  .field-row{ display:flex; gap:10px; font-size:13px; padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.06); }
+  .field-row .k{ width:70px; flex-shrink:0; color:rgba(255,255,255,0.45); }
+  .note-box{
+    width:100%; min-height:70px; margin-top:6px;
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14);
+    border-radius:8px; color:#EDEDED; font-family:inherit; font-size:13.5px;
+    padding:10px; resize:vertical;
+  }
+  .note-box:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+  .detail-actions{ display:flex; gap:8px; margin-top:16px; }
+  .detail-actions button{
+    flex:1; font-family:'IBM Plex Mono', monospace; font-size:12.5px;
+    padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.16);
+    background:var(--accent-dim); border-color:var(--accent); color:#EDEDED; cursor:pointer;
+  }
+
+  @media (max-width:880px){
+    .app{ grid-template-columns:1fr; }
+    .sidebar{ border-right:none; border-bottom:1px solid rgba(255,255,255,0.08); }
+  }
+  @media(prefers-reduced-motion:reduce){ .drawer,.scrim{ transition:none; } }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="mark">Social</span>
+        <span class="room-title">— lo que comparten tus amigos y conocidos</span>
+      </div>
+      <div class="topbar-meta" id="countMeta"></div>
+    </header>
+
+    <aside class="sidebar">
+      <input type="text" id="searchPeople" placeholder="Buscar persona…" oninput="onSearch(this.value)">
+      <ul class="people-list" id="peopleList"></ul>
+    </aside>
+
+    <main class="main">
+      <div class="main-heading">
+        <h1 id="feedTitle">Todos</h1>
+        <p>Posts guardados mientras navegabas, agrupados por quién los publicó.</p>
+      </div>
+      <div class="feed" id="feed"></div>
+    </main>
+  </div>
+
+  <div class="scrim" id="scrim" onclick="closeDrawer()"></div>
+  <div class="drawer" id="drawer">
+    <div class="detail-card" id="detailCard"></div>
+  </div>
+
+<script>
+  const PEOPLE = [
+    { id:'all', name:'Todos', tag:null, color:null },
+    { id:'juli', name:'Juli Fernández', tag:'amiga', color:'#E0937C' },
+    { id:'nano', name:'Nano Ríos', tag:'amigo', color:'#7CA8E0' },
+    { id:'flor', name:'Flor Aguirre', tag:'conocida', color:'#9CE07C' },
+    { id:'ceci', name:'Ceci Duarte', tag:'ex compañera', color:'#E0C77C' },
+  ]
+
+  const POSTS = [
+    { id:'s1', personId:'juli', platform:'Instagram', date:'2026-09-08', text:'Subió fotos de su viaje a Salta, atardecer en las Quebradas.', note:'Preguntarle cómo llegó hasta ahí, se ve hermoso.' },
+    { id:'s2', personId:'nano', platform:'X / Twitter', date:'2026-09-10', text:'Compartió que consiguió trabajo nuevo como desarrollador backend.', note:'Mandarle un mensaje para felicitarlo.' },
+    { id:'s3', personId:'flor', platform:'Instagram', date:'2026-09-05', text:'Posteó sobre la muestra de cerámica en la que participó este mes.', note:null },
+    { id:'s4', personId:'juli', platform:'Tumblr', date:'2026-09-02', text:'Reblogueó un poema largo sobre la nostalgia de las casas de la infancia.', note:null },
+    { id:'s5', personId:'ceci', platform:'Instagram', date:'2026-08-29', text:'Anunció que se muda de ciudad a fin de año.', note:'Ver si coincide con el viaje que estábamos pensando.' },
+    { id:'s6', personId:'nano', platform:'Reddit', date:'2026-08-27', text:'Compartió en un subreddit local que está armando una banda de covers.', note:null },
+  ]
+
+  let activePerson = 'all'
+  let searchTerm = ''
+  let selected = null
+
+  function countFor(personId){
+    return personId === 'all' ? POSTS.length : POSTS.filter(p => p.personId === personId).length
+  }
+
+  function initials(name){
+    return name.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase()
+  }
+
+  function renderPeople(){
+    const list = document.getElementById('peopleList')
+    const filtered = PEOPLE.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    list.innerHTML = filtered.map(p => `
+      <li>
+        <button aria-pressed="${p.id===activePerson}" onclick="selectPerson('${p.id}')">
+          ${p.color ? `<span class="avatar" style="background:${p.color}">${initials(p.name)}</span>` : `<span class="avatar" style="background:rgba(255,255,255,0.15); color:#EDEDED">·</span>`}
+          <span class="person-meta">
+            <span class="person-name">${p.name}</span>
+            ${p.tag ? `<span class="person-tag">${p.tag}</span>` : ''}
+          </span>
+          <span class="person-count">${countFor(p.id)}</span>
+        </button>
+      </li>
+    `).join('')
+  }
+
+  function selectPerson(id){
+    activePerson = id
+    renderPeople()
+    renderFeed()
+  }
+
+  function onSearch(v){ searchTerm = v; renderPeople() }
+
+  function personById(id){ return PEOPLE.find(p => p.id === id) }
+
+  function renderFeed(){
+    const person = personById(activePerson)
+    document.getElementById('feedTitle').textContent = person.name
+    document.getElementById('countMeta').textContent = `${POSTS.length} posts guardados`
+    const items = activePerson === 'all' ? POSTS : POSTS.filter(p => p.personId === activePerson)
+    const feed = document.getElementById('feed')
+    feed.innerHTML = items.map(post => {
+      const who = personById(post.personId)
+      return `
+        <div class="post-card" onclick="openDrawer('${post.id}')">
+          <div class="post-top">
+            <span class="who">${who.name}</span>
+            <span class="dot">·</span>
+            <span class="platform">${post.platform}</span>
+            <span class="date">${post.date}</span>
+          </div>
+          <div class="post-text">${post.text}</div>
+          ${post.note ? `<div class="post-note">Nota: ${post.note}</div>` : ''}
+        </div>
+      `
+    }).join('') || `<p class="empty-state">Todavía no guardaste posts de esta persona.</p>`
+  }
+
+  function openDrawer(id){
+    selected = POSTS.find(p => p.id === id)
+    if (!selected) return
+    const who = personById(selected.personId)
+    document.getElementById('detailCard').innerHTML = `
+      <button class="close" onclick="closeDrawer()">✕</button>
+      <div class="field-row"><span class="k">De</span><span>${who.name} ${who.tag ? '· ' + who.tag : ''}</span></div>
+      <div class="field-row"><span class="k">Red</span><span>${selected.platform}</span></div>
+      <div class="field-row"><span class="k">Fecha</span><span>${selected.date}</span></div>
+      <div class="full-text">${selected.text}</div>
+      <label for="noteBox" style="font-size:12.5px; color:rgba(255,255,255,0.5);">Nota personal</label>
+      <textarea class="note-box" id="noteBox" data-autofocus placeholder="¿Por qué lo guardaste?">${selected.note || ''}</textarea>
+      <div class="detail-actions">
+        <button onclick="saveNote()">Guardar nota</button>
+      </div>
+    `
+    document.getElementById('scrim').classList.add('open')
+    document.getElementById('drawer').classList.add('open')
+  }
+
+  function closeDrawer(){
+    document.getElementById('scrim').classList.remove('open')
+    document.getElementById('drawer').classList.remove('open')
+  }
+
+  function saveNote(){
+    if (!selected) return
+    selected.note = document.getElementById('noteBox').value
+    closeDrawer()
+    renderFeed()
+  }
+
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer() })
+
+  renderPeople()
+  renderFeed()
+</script>
+</body>
+</html>
