@@ -51,7 +51,7 @@ export default function Escultura() {
     <div className="page-escultura">
       <div className="app">
         <header className="topbar">
-          <div className="brand"><Link className="back" to="/">← ArtVision</Link><span className="mark">Escultura</span><span className="sub">— la sala de vitrinas</span></div>
+          <div className="brand"><Link className="back" to="/">← Salas de Arte</Link><span className="mark">Escultura</span><span className="sub">— la sala de vitrinas</span></div>
           <div className="search"><input type="text" placeholder="buscar pieza, autor, tag…" aria-label="Buscar" value={query} onChange={(e) => setQuery(e.target.value)} /></div>
           <div className="meta">{totalCount} piezas en sala</div>
         </header>

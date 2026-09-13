@@ -59,7 +59,7 @@ export default function Cine() {
     <div className="page-cine">
       <div className="app">
         <header className="topbar">
-          <div className="brand"><Link className="back" to="/">← ArtVision</Link><span className="mark">Cine</span><span className="sub">— sala de proyección</span></div>
+          <div className="brand"><Link className="back" to="/">← Salas de Arte</Link><span className="mark">Cine</span><span className="sub">— sala de proyección</span></div>
           <div className="search"><input type="text" placeholder="buscar título, director, tag…" aria-label="Buscar" value={query} onChange={(e) => setQuery(e.target.value)} /></div>
           <div className="meta">{totalCount} fotogramas</div>
         </header>

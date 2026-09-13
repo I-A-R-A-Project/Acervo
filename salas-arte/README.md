@@ -1,4 +1,4 @@
-# ArtVision — prototipos de UI
+# Salas de Arte — prototipos de UI
 
 Proyecto React (Vite + React Router) con una página temática por cada
 una de las 10 bellas artes, navegable desde la home.
@@ -26,7 +26,7 @@ Abrí la URL que muestra la terminal (por defecto http://localhost:5173).
 - Todo lo relacionado a "cola de publicación" / cross-posting fue
   removido a propósito — se va a construir como una página separada.
 - Los datos de cada arte son de ejemplo (mock), listos para reemplazar
-  por datos reales del backend de ArtVision.
+  por datos reales del backend de Salas de Arte.
 
 ## Importar links reales de literatura
 
@@ -34,10 +34,10 @@ Abrí la URL que muestra la terminal (por defecto http://localhost:5173).
 Literatura. Desde la raíz del repositorio se pueden abrir en la aplicación con:
 
 ```bash
-python scripts/add_books.py
+python tests/add_books.py
 ```
 
-El script abre una pestaña del navegador Qt por cada link, espera a que la
+El test abre una pestaña del navegador Qt por cada link, espera a que la
 página termine de renderizarse y guarda automáticamente los metadatos
 disponibles en el estante de poesía. AO3 tiene una espera adicional de 30
 segundos para permitir que termine su captcha temporizado; si todavía aparece
@@ -45,18 +45,16 @@ el desafío, resolvelo en esa pestaña y usá `Save from tab`. Para quitar
 automáticamente únicamente ese lote:
 
 ```bash
-python scripts/remove_books.py
+python tests/remove_books.py
 ```
 
 Para exportar exactamente cómo están guardados actualmente los libros (sin
-modificarlos), cerrá ArtVision y ejecutá:
+modificarlos), cerrá Salas de Arte y ejecutá:
 
 ```bash
-python scripts/dump_books.py
+python tests/dump_books.py
 ```
 
-El script genera `books-dump-YYYYMMDD-HHMMSS.json` en la raíz. También se puede
-indicar otro destino con `python scripts/dump_books.py --output ruta/salida.json`.
+El test genera `books-dump-YYYYMMDD-HHMMSS.json` en la raíz. También se puede
+indicar otro destino con `python tests/dump_books.py --output ruta/salida.json`.
 
-Los scripts requieren que la app pueda ejecutarse con PyQt6 y que exista una
-versión compilada en `artvision-app/dist` (`npm run build`).

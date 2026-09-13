@@ -17,7 +17,7 @@ export default function Home() {
   return (
     <div className="page-home">
       <div className="home-header">
-        <div className="eyebrow">CienciaVision — prototipo de UI</div>
+        <div className="eyebrow">Salas de Ciencia — prototipo de UI</div>
         <h1>Una sala distinta para cada ciencia</h1>
         <p>Ocho maneras de navegar y guardar referencias — cada rama con sus propias subclasificaciones, su propia ficha de detalle, y el mismo objetivo: armar una biblioteca de consulta reutilizable.</p>
       </div>

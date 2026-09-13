@@ -50,7 +50,7 @@ export default function Danza() {
     <div className="page-danza">
       <div className="app">
         <header className="topbar">
-          <div className="brand"><Link className="back" to="/">← ArtVision</Link><span className="mark">Danza</span><span className="sub">— el escenario</span></div>
+          <div className="brand"><Link className="back" to="/">← Salas de Arte</Link><span className="mark">Danza</span><span className="sub">— el escenario</span></div>
           <div className="search"><input type="text" placeholder="buscar pieza, coreógrafo, tag…" aria-label="Buscar" value={query} onChange={(e) => setQuery(e.target.value)} /></div>
           <div className="meta">{totalCount} marcas en escena</div>
         </header>

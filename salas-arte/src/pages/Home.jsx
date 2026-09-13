@@ -28,7 +28,7 @@ export default function Home() {
   return (
     <div className="page-home">
       <div className="home-header">
-        <div className="eyebrow">ArtVision — prototipos de UI</div>
+        <div className="eyebrow">Salas de Arte — prototipos de UI</div>
         <h1>Una sala distinta para cada arte</h1>
         <p>Diez maneras de navegar y guardar referencias — cada una con su propia metáfora visual, su propia ficha de detalle, y el mismo objetivo: armar una biblioteca de inspiración reutilizable.</p>
       </div>

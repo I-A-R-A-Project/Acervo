@@ -1,4 +1,4 @@
-"""Open ArtVision and import the real links listed in books.txt."""
+"""Open Salas de Arte and import the real links listed in books.txt."""
 
 import argparse
 import subprocess
@@ -49,7 +49,7 @@ def main():
         command.extend(["--url", url])
     subprocess.Popen(command, cwd=ROOT)
     print(
-        f"ArtVision abierto: {len(urls)} links en cola, "
+        f"Salas de Arte abierto: {len(urls)} links en cola, "
         f"cargando {args.tabs} pestaña(s) a la vez."
     )
 

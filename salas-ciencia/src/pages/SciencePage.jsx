@@ -62,7 +62,7 @@ export default function SciencePage() {
       <div className="app">
         <header className="topbar">
           <div className="brand">
-            <Link className="back" to="/">← CienciaVision</Link>
+            <Link className="back" to="/">← Salas de Ciencia</Link>
             <span className="mark">{branch.name}</span>
             <span className="room-title">— {branch.tag}</span>
           </div>

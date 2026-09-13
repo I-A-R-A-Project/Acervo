@@ -1,6 +1,6 @@
-# CienciaVision — prototipo de UI
+# Salas de Ciencia — prototipo de UI
 
-Proyecto React (Vite + React Router), hermano de ArtVision, con una página
+Proyecto React (Vite + React Router), hermano de Salas de Arte, con una página
 temática por cada rama de la ciencia, navegable desde la home.
 
 ## Cómo correrlo
@@ -29,7 +29,7 @@ Abrí la URL que muestra la terminal (por defecto http://localhost:5173).
 ## Notas
 
 - Es una versión simple/visual: sin formulario para agregar ítems ni
-  scraping de metadatos desde URLs (a diferencia de ArtVision). Los datos
+  scraping de metadatos desde URLs (a diferencia de Salas de Arte). Los datos
   están fijos en `scienceData.js`, listos para reemplazar por datos reales
   de un backend.
 - Para agregar una rama nueva alcanza con sumar un objeto a `BRANCHES` en

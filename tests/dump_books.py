@@ -1,4 +1,4 @@
-"""Export the literature catalog currently stored by ArtVision."""
+"""Export the literature catalog currently stored by Salas de Arte."""
 
 import argparse
 import json

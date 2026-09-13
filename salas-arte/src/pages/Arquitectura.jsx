@@ -54,7 +54,7 @@ export default function Arquitectura() {
     <div className="page-arquitectura">
       <div className="app">
         <header className="topbar">
-          <div className="brand"><Link className="back" to="/">← ArtVision</Link><span className="mark">Arquitectura</span><span className="sub">— la mesa de dibujo</span></div>
+          <div className="brand"><Link className="back" to="/">← Salas de Arte</Link><span className="mark">Arquitectura</span><span className="sub">— la mesa de dibujo</span></div>
           <div className="search"><input type="text" placeholder="buscar plano, autor, tag…" aria-label="Buscar" value={query} onChange={(e) => setQuery(e.target.value)} /></div>
           <div className="meta">{totalCount} planos archivados</div>
         </header>

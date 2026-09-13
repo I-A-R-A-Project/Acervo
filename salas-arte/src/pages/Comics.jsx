@@ -56,7 +56,7 @@ export default function Comics() {
     <div className="page-comics">
       <div className="app">
         <header className="topbar">
-          <div className="brand"><Link className="back" to="/">← ArtVision</Link><span className="mark">Cómics</span><span className="sub">— la página</span></div>
+          <div className="brand"><Link className="back" to="/">← Salas de Arte</Link><span className="mark">Cómics</span><span className="sub">— la página</span></div>
           <div className="search"><input type="text" placeholder="buscar viñeta, autor, tag…" aria-label="Buscar" value={query} onChange={(e) => setQuery(e.target.value)} /></div>
           <div className="meta">{totalCount} viñetas</div>
         </header>

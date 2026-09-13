@@ -74,7 +74,7 @@ class ArtVisionHttpServer:
 class ArtVisionWindow(QMainWindow):
     def __init__(self, initial_path="/literatura", initial_urls=None, max_source_tabs=2):
         super().__init__()
-        self.setWindowTitle("ArtVision")
+        self.setWindowTitle("Salas de Arte")
         self.resize(1280, 820)
         self.max_source_tabs = max_source_tabs
         self.pending_source_urls = list(initial_urls or [])
@@ -117,7 +117,7 @@ class ArtVisionWindow(QMainWindow):
         self.capture_action.triggered.connect(self.capture_current_tab)
         self.navbar.addAction(self.capture_action)
 
-        self.artvision_app_tab = self.new_tab(self.server.url, title="ArtVision")
+        self.artvision_app_tab = self.new_tab(self.server.url, title="Salas de Arte")
         self.artvision_app_tab.setProperty("artvision_app", True)
         self.artvision_app_tab.setUrl(QUrl(f"{self.server.url}{initial_path.lstrip('/')}"))
         self.tabs.tabBar().setTabButton(
@@ -418,9 +418,9 @@ if __name__ == "__main__":
     import sys
 
     app = QApplication(sys.argv)
-    app.setApplicationName("ArtVision")
+    app.setApplicationName("Salas de Arte")
     parser = argparse.ArgumentParser()
-    parser.add_argument("--path", default="/literatura", help="Ruta inicial de ArtVision")
+    parser.add_argument("--path", default="/literatura", help="Ruta inicial de Salas de Arte")
     parser.add_argument("--url", action="append", default=[], help="URL externa para abrir en una pestaña")
     parser.add_argument(
         "--max-source-tabs",

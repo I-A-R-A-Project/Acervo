@@ -565,7 +565,7 @@ export default function Literatura() {
       <div className="app">
         <header className="topbar">
           <div className="brand">
-            <Link className="back" to="/">← ArtVision</Link>
+            <Link className="back" to="/">← Salas de Arte</Link>
             <span className="mark">Literatura</span>
             <span className="room-title">— la sala de lectura</span>
           </div>

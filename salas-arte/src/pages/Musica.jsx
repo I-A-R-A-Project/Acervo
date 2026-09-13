@@ -53,7 +53,7 @@ export default function Musica() {
     <div className="page-musica">
       <div className="app">
         <header className="topbar">
-          <div className="brand"><Link className="back" to="/">← ARTVISION</Link><span className="mark">MÚSICA</span><span className="sub">— la discoteca</span></div>
+          <div className="brand"><Link className="back" to="/">← SALAS DE ARTE</Link><span className="mark">MÚSICA</span><span className="sub">— la discoteca</span></div>
           <div className="search"><input type="text" placeholder="buscar pista, artista, tag…" aria-label="Buscar" value={query} onChange={(e) => setQuery(e.target.value)} /></div>
           <div className="meta">{totalCount} fundas en el cajón</div>
         </header>

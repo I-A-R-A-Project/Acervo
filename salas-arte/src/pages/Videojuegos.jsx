@@ -56,7 +56,7 @@ export default function Videojuegos() {
     <div className="page-videojuegos">
       <div className="app">
         <header className="topbar">
-          <div className="brand"><Link className="back" to="/">← ARTVISION</Link><span className="mark">ARTVISION</span><span className="sub">— la cartucho-teca</span></div>
+          <div className="brand"><Link className="back" to="/">← SALAS DE ARTE</Link><span className="mark">SALAS DE ARTE</span><span className="sub">— la cartucho-teca</span></div>
           <div className="search"><input type="text" placeholder="buscar juego, estudio, tag…" aria-label="Buscar" value={query} onChange={(e) => setQuery(e.target.value)} /></div>
           <div className="meta">{totalCount} cartuchos</div>
         </header>

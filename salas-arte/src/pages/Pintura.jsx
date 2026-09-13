@@ -55,7 +55,7 @@ export default function Pintura() {
     <div className="page-pintura">
       <div className="app">
         <header className="topbar">
-          <div className="brand"><Link className="back" to="/">← ArtVision</Link><span className="mark">Pintura</span><span className="sub">— el salón</span></div>
+          <div className="brand"><Link className="back" to="/">← Salas de Arte</Link><span className="mark">Pintura</span><span className="sub">— el salón</span></div>
           <div className="search"><input type="text" placeholder="buscar obra, autor, tag…" aria-label="Buscar" value={query} onChange={(e) => setQuery(e.target.value)} /></div>
           <div className="meta">{totalCount} obras colgadas</div>
         </header>

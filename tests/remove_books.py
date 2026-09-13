@@ -1,4 +1,4 @@
-"""Open ArtVision and remove the temporary books.txt import batch."""
+"""Open Salas de Arte and remove the temporary books.txt import batch."""
 
 import subprocess
 import sys
@@ -14,7 +14,7 @@ def main():
         [sys.executable, str(APP), "--path", "/literatura?removeImported=1"],
         cwd=ROOT,
     )
-    print("ArtVision abierto para quitar el lote importado desde books.txt.")
+    print("Salas de Arte abierto para quitar el lote importado desde books.txt.")
 
 
 if __name__ == "__main__":
