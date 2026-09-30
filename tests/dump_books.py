@@ -18,7 +18,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from artvision_qt import ArtVisionHttpServer  # noqa: E402
-from web_common.web_profiles import build_web_profile  # noqa: E402
+from web_common.browser.web_profiles import build_web_profile  # noqa: E402
 
 
 def default_output_path():

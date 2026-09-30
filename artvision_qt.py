@@ -17,10 +17,10 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from web_common.navbar import BasicNavbar, address_to_url, bind_navigation, save_web_page
-from web_common.history import HistoryDialog, HistoryStore
-from web_common.tabs import create_profiled_web_view
-from web_common.web_profiles import build_web_profile
+from web_common.nav.navbar import BasicNavbar, address_to_url, bind_navigation, save_web_page
+from web_common.storage.history import HistoryDialog, HistoryStore
+from web_common.browser.tabs import create_profiled_web_view
+from web_common.browser.web_profiles import build_web_profile
 
 ARTVISION_ROOT = Path(__file__).resolve().parent
 ARTVISION_APP_ROOT = ARTVISION_ROOT / "artvision-app"
