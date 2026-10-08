@@ -83,7 +83,7 @@ export default function SciencePage() {
           <h2>Subclasificaciones</h2>
           <ShelfList groups={branch.groups} allLabel="Todas" active={active} onSelect={setActive} counts={countsByGroup} />
           <div className="card-index">
-            Cada ficha es un ítem de referencia.<br />
+            Cada ficha presenta un artículo, concepto o experimento.<br />
             Hacé clic para ver su <b>detalle</b> completo.
           </div>
         </aside>

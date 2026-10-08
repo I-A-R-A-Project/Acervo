@@ -19,7 +19,7 @@ export default function Home() {
       <div className="home-header">
         <div className="eyebrow">Salas de Ciencia — prototipo de UI</div>
         <h1>Una sala distinta para cada ciencia</h1>
-        <p>Ocho maneras de navegar y guardar referencias — cada rama con sus propias subclasificaciones, su propia ficha de detalle, y el mismo objetivo: armar una biblioteca de consulta reutilizable.</p>
+        <p>Ocho maneras de descubrir y guardar artículos y publicaciones — cada rama con sus propias subclasificaciones y ficha de detalle, para armar una colección de consulta reutilizable.</p>
       </div>
       <div className="grid">
         {BRANCHES.map((b) => (

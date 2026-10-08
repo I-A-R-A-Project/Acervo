@@ -60,7 +60,7 @@ export default function Musica() {
         <aside className="sidebar">
           <h2>Cajones</h2>
           <ShelfList groups={GROUPS} allLabel="Todos los cajones" active={active} onSelect={setActive} counts={countsByGroup} />
-          <div className="note">Cada funda es una referencia sonora. Click para abrir el <b>gatefold</b>.</div>
+          <div className="note">Cada funda contiene una pieza musical. Click para abrir el <b>gatefold</b>.</div>
         </aside>
         <main className="main">
           <div className="heading">

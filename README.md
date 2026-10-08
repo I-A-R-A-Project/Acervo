@@ -1,7 +1,7 @@
 # Acervo
 
 Acervo es un programa de escritorio para descubrir, guardar y organizar
-referencias — de arte y de ciencia — en un mismo lugar, con la posibilidad
+obras, publicaciones y artículos sobre arte y ciencia en un mismo lugar, con la posibilidad
 de sumar automáticamente lo que aparece mientras navegás redes sociales, sin
 perder el control manual de qué entra a la colección.
 
@@ -26,18 +26,17 @@ Tres formas de que algo entre a Acervo:
 
 ## Usuario objetivo
 
-Personas que consumen arte y ciencia, coleccionan referencias, exploran
-inspiración o simplemente quieren guardar y volver a encontrar cosas que
-vieron. Incluye artistas, ilustradores, concept artists, fotógrafos,
+Personas que consumen arte y ciencia, exploran inspiración o simplemente
+quieren guardar posts, artículos y obras para volver a encontrarlos. Incluye
+artistas, ilustradores, concept artists, fotógrafos,
 diseñadores, creadores digitales, curadores, estudiantes, gente que sigue de
 cerca alguna rama de la ciencia por interés propio, y usuarios que
 simplemente disfrutan explorar y guardar ideas sin ser profesionales de
 nada de esto.
 
 Acervo debe ayudarlo a:
-- recopilar inspiración y referencias desde varias fuentes
-- construir tableros y bibliotecas de referencia, tanto de arte como de
-  ciencia
+- descubrir obras, posts y artículos desde varias fuentes
+- organizar colecciones y tableros de arte y ciencia
 - llevar un archivo personal navegable, sin depender de los buscadores
   internos de cada red o sitio
 - guardar contenido de interés sin necesidad de ser artista o científico
@@ -55,12 +54,13 @@ Acervo debe ayudarlo a:
   ninguna sala; triage manual con aceptar / reasignar / descartar.
 - **Social** — posts de amigos y conocidos, separados de los catálogos de
   arte y ciencia.
+- **Spam** — anuncios o post con palabras/tags silenciadas
 
 ## Forma del producto
 
 ### 1. Capa de descubrimiento
 
-Acervo reúne referencias desde varias fuentes, según la sala:
+Acervo reúne obras, publicaciones y artículos desde varias fuentes, según la sala:
 
 - **Arte**: Behance, ArtStation, Dribbble, DeviantArt, Unsplash, Wikimedia
   Commons, Pinterest, museos y galerías, portfolios de artistas curados,
@@ -77,7 +77,7 @@ Acervo reúne referencias desde varias fuentes, según la sala:
 Dentro de cada sala, y también cruzando salas, el usuario puede armar
 tableros como:
 - inspiración
-- referencias de un proyecto o campaña
+- obras, publicaciones o artículos de un proyecto o campaña
 - estudios por medio o por subclasificación
 - moodboards por color, tema o nivel de dificultad (en ciencia)
 - ítems listos para retomar o profundizar

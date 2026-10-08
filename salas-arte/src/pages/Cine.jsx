@@ -66,11 +66,11 @@ export default function Cine() {
         <aside className="sidebar">
           <h2>Programación</h2>
           <ShelfList groups={GROUPS} allLabel="Toda la programación" active={active} onSelect={setActive} counts={countsByGroup} />
-          <div className="note">Cada fotograma es una referencia guardada. Click para abrir la <b>claqueta</b>.</div>
+          <div className="note">Cada fotograma pertenece a una película guardada. Click para abrir la <b>claqueta</b>.</div>
         </aside>
         <main className="main">
           <div className="heading">
-            <div><h1>Rollo de referencias</h1><p>Piezas audiovisuales para estudio de encuadre, montaje y color.</p></div>
+            <div><h1>Rollo de películas</h1><p>Películas y piezas audiovisuales organizadas por encuadre, montaje y color.</p></div>
             <div className="count-tag">{visibleCount} en vista</div>
           </div>
           <div className="marquee"><span>{marqueeText}</span></div>

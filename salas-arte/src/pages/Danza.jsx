@@ -57,7 +57,7 @@ export default function Danza() {
         <aside className="sidebar">
           <h2>Repertorio</h2>
           <ShelfList groups={GROUPS} allLabel="Todo el repertorio" active={active} onSelect={setActive} counts={countsByGroup} />
-          <div className="note">Cada foco marca una referencia guardada, como en un plano de blocking.</div>
+          <div className="note">Cada foco marca una pieza de danza guardada, como en un plano de blocking.</div>
         </aside>
         <main className="main">
           <div className="heading">

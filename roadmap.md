@@ -13,7 +13,7 @@ Salas de Arte y Salas de Ciencia navegables, con carga manual de ítems.
 - creación de tableros/moodboards, dentro de una sala o cruzando varias
 - comparación lado a lado
 - notas y comentarios por ítem
-- exportación de referencias
+- exportación de posts, artículos y obras guardadas
 
 ## Fase 3 — Bandeja
 Scraping lento y no autónomo de redes sociales.

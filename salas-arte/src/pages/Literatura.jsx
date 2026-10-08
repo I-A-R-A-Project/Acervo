@@ -516,7 +516,7 @@ export default function Literatura() {
 
   function summaryTextFromRecord(entry) {
     if (entry?.summary && entry.summary.trim()) return entry.summary.trim()
-    return `Saved from ${entry?.source || 'source'} for later reference.`
+    return `Saved from ${entry?.source || 'source'} to read later.`
   }
 
   function handleSubmit(event) {
@@ -660,7 +660,7 @@ export default function Literatura() {
           <div className="main-heading">
             <div>
               <h1>Literature shelf</h1>
-              <p>Text references saved from blogs, magazines, and personal publications.</p>
+              <p>Texts and articles saved from blogs, magazines, and independent publications.</p>
             </div>
             <div className="result-count">{visibleCount} in view</div>
           </div>
@@ -711,7 +711,7 @@ export default function Literatura() {
             <div className="field-row"><span className="k">Saved</span><span className="v">{selected.saved}</span></div>
             <div className="field-row"><span className="k">Tags</span><span className="v"><span className="tag-row">{selected.tags.map(t => <span className="tag" key={t}>{t}</span>)}</span></span></div>
             <div className="notes-block">{selected.notes || 'No notes yet. Add context for future publishing.'}</div>
-            <span className="stamp">{selected.license === 'public domain' ? 'Public domain' : selected.license === 'unknown' ? 'License unconfirmed' : 'Saved reference'}</span>
+            <span className="stamp">{selected.license === 'public domain' ? 'Public domain' : selected.license === 'unknown' ? 'License unconfirmed' : 'Saved item'}</span>
             <div className="card-actions">
               <button className="btn-danger" onClick={() => removeBook(selected.id)}>Delete bookmark</button>
             </div>

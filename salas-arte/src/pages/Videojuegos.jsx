@@ -63,11 +63,11 @@ export default function Videojuegos() {
         <aside className="sidebar">
           <h2>Géneros</h2>
           <ShelfList groups={GROUPS} allLabel="TODOS" active={active} onSelect={setActive} counts={countsByGroup} />
-          <div className="note">Cada cartucho es una referencia guardada. Click para abrir la <b>pantalla de guardado</b>.</div>
+          <div className="note">Cada cartucho contiene un juego guardado. Click para abrir la <b>pantalla de guardado</b>.</div>
         </aside>
         <main className="main">
           <div className="heading">
-            <div><h1>ESTANTE DE JUEGOS</h1><p>Referencias de videojuegos para estudio de arte, UI y worldbuilding.</p></div>
+            <div><h1>ESTANTE DE JUEGOS</h1><p>Videojuegos para explorar arte, interfaces y construcción de mundos.</p></div>
             <div className="count-tag">{visibleCount} en vista</div>
           </div>
           {visibleGroups.map((g, gi) => (

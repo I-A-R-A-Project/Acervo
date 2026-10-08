@@ -1,0 +1,106 @@
+"""HTML for the Acervo Browser's local start page."""
+
+import html
+
+
+def render_home_page(arts_url, science_url, tray_url, social_url, spam_url):
+    sections = (
+        (
+            "Salas de Artes",
+            "Explora las diez disciplinas artísticas y guarda obras y publicaciones.",
+            arts_url,
+            "Arte",
+            "arts",
+        ),
+        (
+            "Salas de Ciencia",
+            "Explora y organiza artículos y publicaciones de ocho ramas de la ciencia.",
+            science_url,
+            "Ciencia",
+            "science",
+        ),
+        (
+            "Bandeja",
+            "Revisa, clasifica o descarta contenido pendiente.",
+            tray_url,
+            "Triage",
+            "tray",
+        ),
+        (
+            "Social",
+            "Consulta publicaciones guardadas de amigos y conocidos.",
+            social_url,
+            "Feed personal",
+            "social",
+        ),
+        (
+            "Spam",
+            "Contenido filtrado de anuncios o palabras silenciadas.",
+            spam_url,
+            "En desarrollo",
+            "spam",
+        ),
+    )
+    cards = "".join(
+        f"""
+        <a class="card {theme}" href="{html.escape(url, quote=True)}">
+          <span class="eyebrow">{html.escape(label)}</span>
+          <span class="title">{html.escape(title)}</span>
+          <span class="description">{html.escape(description)}</span>
+          <span class="open">Abrir sección <span aria-hidden="true">↗</span></span>
+        </a>
+        """
+        for title, description, url, label, theme in sections
+    )
+    return f"""<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Acervo — Inicio</title>
+  <style>
+    :root {{ color-scheme: dark; font-family: "Segoe UI", sans-serif; }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      min-height: 100vh; margin: 0; color: #f1eee7;
+      background: radial-gradient(ellipse at 50% 0, #242a2c 0, #111416 55%, #0c0e10 100%);
+    }}
+    main {{ width: min(1060px, 100%); margin: auto; padding: 9vh 28px 48px; }}
+    header {{ max-width: 700px; margin: 0 auto 42px; text-align: center; }}
+    .brand {{ color: #cfaa79; font: 600 12px "Consolas", monospace; letter-spacing: .2em; text-transform: uppercase; }}
+    h1 {{ margin: 14px 0 12px; font: 700 clamp(36px, 6vw, 58px) Georgia, serif; letter-spacing: -.035em; }}
+    header p {{ max-width: 56ch; margin: 0 auto; color: #aeb4b2; font-size: 16px; line-height: 1.65; }}
+    .grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }}
+    .card {{
+      min-height: 205px; display: flex; flex-direction: column; align-items: flex-start;
+      padding: 22px; border: 1px solid #ffffff19; border-radius: 14px; color: inherit;
+      text-decoration: none; background: linear-gradient(145deg, #ffffff0c, #ffffff04);
+      transition: transform .18s ease, border-color .18s ease, background .18s ease;
+    }}
+    .card:hover, .card:focus-visible {{ transform: translateY(-3px); border-color: #ffffff55; background-color: #ffffff0c; outline: none; }}
+    .eyebrow {{ color: var(--accent); font: 600 11px "Consolas", monospace; letter-spacing: .12em; text-transform: uppercase; }}
+    .title {{ margin-top: 15px; font: 700 25px Georgia, serif; }}
+    .description {{ margin-top: 9px; color: #adb3b2; font-size: 14px; line-height: 1.5; }}
+    .open {{ margin-top: auto; padding-top: 18px; color: var(--accent); font: 600 12px "Consolas", monospace; }}
+    .arts {{ --accent: #df9e74; background-image: linear-gradient(145deg, #653f2c55, #ffffff04 72%); }}
+    .science {{ --accent: #83c8b5; background-image: linear-gradient(145deg, #1e514555, #ffffff04 72%); }}
+    .tray {{ --accent: #a8b5c0; }}
+    .social {{ --accent: #e6a392; }}
+    .spam {{ --accent: #d89083; }}
+    footer {{ margin-top: 32px; color: #777e7d; text-align: center; font: 11px "Consolas", monospace; }}
+    @media (max-width: 560px) {{ main {{ padding: 48px 16px 32px; }} header {{ margin-bottom: 28px; }} }}
+    @media (prefers-reduced-motion: reduce) {{ .card {{ transition: none; }} }}
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="brand">Acervo Digital</div>
+      <h1>Un lugar para lo que vale guardar.</h1>
+      <p>Explora arte y ciencia, organiza tus hallazgos y vuelve a ellos cuando quieras.</p>
+    </header>
+    <nav class="grid" aria-label="Secciones de Acervo">{cards}</nav>
+    <footer>Tu colección personal de arte y ciencia</footer>
+  </main>
+</body>
+</html>"""

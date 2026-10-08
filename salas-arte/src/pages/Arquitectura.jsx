@@ -61,11 +61,11 @@ export default function Arquitectura() {
         <aside className="sidebar">
           <h2>Legajos</h2>
           <ShelfList groups={GROUPS} allLabel="Todos los legajos" active={active} onSelect={setActive} counts={countsByGroup} />
-          <div className="note">Cada hoja es una referencia guardada. Click para abrir su <b>cajetín técnico</b> con datos y licencia.</div>
+          <div className="note">Cada hoja presenta una obra guardada. Click para abrir su <b>cajetín técnico</b> con datos y licencia.</div>
         </aside>
         <main className="main">
           <div className="heading">
-            <div><h1>Mesa de planos</h1><p>Referencias arquitectónicas recolectadas de portafolios y archivos abiertos.</p></div>
+            <div><h1>Mesa de planos</h1><p>Obras arquitectónicas recopiladas de portafolios y archivos abiertos.</p></div>
             <div className="count-tag">{visibleCount} en vista</div>
           </div>
           {visibleGroups.map((g, gi) => (
