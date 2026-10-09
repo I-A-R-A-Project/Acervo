@@ -46,7 +46,7 @@ Acervo debe ayudarlo a:
 
 ## Las secciones
 
-- **[Salas de Artes](./Salas%20de%20Artes.md)** — las diez bellas artes,
+- **[Salas de Artes](./Salas%20de%20Artes.md)** — nueve salas,
   cada una con su propia metáfora visual y ficha de detalle.
 - **[Salas de Ciencia](./Salas%20de%20Ciencia.md)** — ocho ramas de la
   ciencia, cada una con sus propias subclasificaciones.
@@ -129,7 +129,7 @@ antes de entrar a cualquier sala:
 ```text
 Acervo/
 ├── app/                     # shell principal de la app de escritorio
-├── salas-arte/              # las 10 salas de arte (una por disciplina)
+├── salas-arte/              # las 9 salas de arte
 ├── salas-ciencia/           # las 8 salas de ciencia (una por disciplina)
 ├── bandeja/                 # triage de posts sin clasificar
 ├── social/                  # feed de posts de amigos y conocidos
@@ -139,6 +139,7 @@ Acervo/
 ├── viewer/                  # galería, visor y fichas de detalle compartidas
 ├── publishing/              # adapters de publicación cruzada (capa 4, obra propia)
 ├── ui/                      # componentes UI compartidos (drawer, shelf list, filtros)
+├── docs/                    # fuentes candidatas y documentación de APIs
 ├── README.md                # este archivo
 ├── Salas de Artes.md
 ├── Salas de Ciencia.md
