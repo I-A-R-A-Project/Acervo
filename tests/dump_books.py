@@ -1,4 +1,4 @@
-"""Export the literature catalog currently stored by Salas de Arte."""
+"""Export the Literature catalog from Acervo Browser's persistent profile."""
 
 import argparse
 import json
@@ -10,14 +10,17 @@ from PyQt6.QtCore import QTimer, QUrl
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtWebEngineCore import QWebEnginePage
 
+
 ROOT = Path(__file__).resolve().parents[1]
-APP_PROFILE_DIR = Path.home() / ".artvision_qt"
+REPOSITORY_ROOT = ROOT.parent
+PROFILE_DIR = Path.home() / ".acervo_browser"
 STORAGE_KEY = "artvision-literatura-groups"
 
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+for import_path in (ROOT, REPOSITORY_ROOT):
+    if str(import_path) not in sys.path:
+        sys.path.insert(0, str(import_path))
 
-from artvision_qt import ArtVisionHttpServer  # noqa: E402
+from acervo_browser import ARTS_PORT, LocalSectionServer  # noqa: E402
 from web_common.browser.web_profiles import build_web_profile  # noqa: E402
 
 
@@ -28,49 +31,54 @@ def default_output_path():
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Exporta el valor actual de localStorage de la sala Literatura."
+        description="Export the Literature catalog from Acervo Browser local storage."
     )
     parser.add_argument(
         "-o",
         "--output",
         type=Path,
         default=default_output_path(),
-        help="Archivo JSON de salida (por defecto: books-dump-YYYYMMDD-HHMMSS.json).",
+        help="JSON output path (defaults to books-dump-YYYYMMDD-HHMMSS.json)",
     )
     args = parser.parse_args()
     output_path = args.output if args.output.is_absolute() else ROOT / args.output
 
     app = QApplication(sys.argv)
-    server = ArtVisionHttpServer(
-        ROOT / "artvision-app" / "dist"
-        if (ROOT / "artvision-app" / "dist").exists()
-        else ROOT / "artvision-app"
-    )
+    try:
+        server = LocalSectionServer(ROOT / "salas-arte" / "dist", ARTS_PORT)
+    except OSError as error:
+        raise SystemExit(
+            f"No se pudo abrir el servidor local del catálogo. "
+            f"Cerrá Acervo Browser y volvé a intentar: {error}"
+        ) from error
+
     profile = build_web_profile(
-        "ArtVisionProfile",
-        None,
-        str(APP_PROFILE_DIR / "storage"),
-        str(APP_PROFILE_DIR / "cache"),
+        name="acervo",
+        parent=None,
+        storage_path=PROFILE_DIR / "storage",
+        cache_path=PROFILE_DIR / "cache",
+        download_path=PROFILE_DIR / "downloads",
     )
     page = QWebEnginePage(profile)
     finished = {"value": False}
 
-    def fail(message):
+    def finish(exit_code=0, message=None):
         if finished["value"]:
             return
         finished["value"] = True
+        if message:
+            print(message, file=sys.stderr)
         server.stop()
-        raise SystemExit(message)
+        app.exit(exit_code)
 
     def write_dump(raw_value):
         if finished["value"]:
             return
-        finished["value"] = True
         try:
             groups = json.loads(raw_value) if raw_value else None
         except json.JSONDecodeError as error:
-            server.stop()
-            raise SystemExit(f"El valor guardado no es JSON válido: {error}") from error
+            finish(1, f"El valor guardado no es JSON válido: {error}")
+            return
 
         dump = {
             "captured_at": datetime.now(timezone.utc).isoformat(),
@@ -89,22 +97,23 @@ def main():
             for group in groups
             if isinstance(group, dict) and isinstance(group.get("items"), list)
         ) if isinstance(groups, list) else 0
-        print(f"Exportados {total} libros a {output_path}")
-        server.stop()
-        app.quit()
+        finish(message=f"Exportadas {total} entradas a {output_path}")
 
     def on_load(ok):
         if not ok:
-            fail("No se pudo abrir la aplicación para leer localStorage.")
+            finish(1, "No se pudo abrir Literatura para leer el catálogo.")
+            return
         page.runJavaScript(
             f"localStorage.getItem({json.dumps(STORAGE_KEY)})",
             write_dump,
         )
 
-    server.start()
     page.loadFinished.connect(on_load)
-    page.load(QUrl(f"{server.url}literatura"))
-    QTimer.singleShot(15000, lambda: fail("Tiempo agotado leyendo localStorage."))
+    page.load(QUrl(f"http://127.0.0.1:{ARTS_PORT}/literatura"))
+    QTimer.singleShot(
+        15000,
+        lambda: finish(1, "Tiempo agotado leyendo el catálogo de Literatura."),
+    )
     sys.exit(app.exec())
 
 

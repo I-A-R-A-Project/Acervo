@@ -1,56 +1,67 @@
-"""Open Salas de Arte and import the real links listed in books.txt."""
+"""Open URLs in Acervo Browser for manual source-capture tests."""
 
 import argparse
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
 
 
 ROOT = Path(__file__).resolve().parents[1]
-BOOKS_FILE = ROOT / "books.txt"
-APP = ROOT / "artvision_qt.py"
+BROWSER = ROOT / "acervo_browser.py"
 
 
-def read_urls():
+def read_urls(files):
     urls = []
-    for line in BOOKS_FILE.read_text(encoding="utf-8").splitlines():
-        value = line.strip()
-        if value and not value.startswith("#") and value.startswith(("http://", "https://")):
-            urls.append(value)
-    return list(dict.fromkeys(urls))
+    for path in files:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            value = line.strip()
+            if value and not value.startswith("#"):
+                urls.append(value)
+    return urls
+
+
+def is_http_url(value):
+    try:
+        parsed = urlsplit(value)
+        return parsed.scheme.lower() in {"http", "https"} and bool(parsed.netloc)
+    except ValueError:
+        return False
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Importa books.txt sin cargar todas las páginas al mismo tiempo."
+        description="Open source URLs in Acervo Browser to test saving from a tab."
     )
     parser.add_argument(
-        "--tabs",
-        type=int,
-        choices=(1, 4),
-        default=1,
-        help="Cantidad de pestañas externas a cargar a la vez (por defecto: 1).",
+        "--url",
+        action="append",
+        default=[],
+        help="URL to test (repeat to queue sources one at a time)",
+    )
+    parser.add_argument(
+        "--file",
+        action="append",
+        type=Path,
+        default=[],
+        help="UTF-8 text file with one URL per line; # lines are ignored",
     )
     args = parser.parse_args()
 
-    urls = read_urls()
+    urls = list(dict.fromkeys([*args.url, *read_urls(args.file)]))
+    invalid = [url for url in urls if not is_http_url(url)]
+    if invalid:
+        parser.error(f"Solo se admiten URLs http(s); URL inválida: {invalid[0]}")
     if not urls:
-        raise SystemExit("books.txt no contiene links http(s) válidos.")
+        parser.error("Indicá al menos una URL con --url o --file.")
 
-    command = [
-        sys.executable,
-        str(APP),
-        "--path",
-        "/literatura",
-        "--max-source-tabs",
-        str(args.tabs),
-    ]
+    command = [sys.executable, str(BROWSER), "--test-batch"]
     for url in urls:
         command.extend(["--url", url])
     subprocess.Popen(command, cwd=ROOT)
     print(
-        f"Salas de Arte abierto: {len(urls)} links en cola, "
-        f"cargando {args.tabs} pestaña(s) a la vez."
+        f"Acervo Browser abierto con {len(urls)} fuente(s) en cola. "
+        "Se carga una por vez; usá «Save from tab» para guardar y avanzar."
     )
 
 

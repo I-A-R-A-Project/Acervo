@@ -10,7 +10,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Thread
 from typing import Optional, Callable
-from urllib.parse import unquote, urlsplit
+from urllib.parse import unquote, urlencode, urlsplit
 
 from PyQt6.QtCore import QUrl
 from PyQt6.QtGui import QAction
@@ -37,6 +37,9 @@ from web_common.browser.web_profiles import build_web_profile
 from home_page import render_home_page
 
 PROFILE_DIR = Path.home() / ".acervo_browser"
+ARTS_PORT = 8765
+SCIENCE_PORT = 8766
+LOCAL_PAGES_PORT = 8767
 
 
 class SectionRequestHandler(SimpleHTTPRequestHandler):
@@ -55,11 +58,11 @@ class SectionRequestHandler(SimpleHTTPRequestHandler):
 
 
 class LocalSectionServer:
-    def __init__(self, directory: Path):
+    def __init__(self, directory: Path, port: int):
         if not (directory / "index.html").is_file():
             raise FileNotFoundError(f"No se encontró el index.html de la sección: {directory}")
         handler = partial(SectionRequestHandler, directory=str(directory))
-        self.server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+        self.server = ThreadingHTTPServer(("127.0.0.1", port), handler)
         self.url = f"http://127.0.0.1:{self.server.server_address[1]}/"
         self.thread = Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
@@ -80,14 +83,14 @@ class LocalPagesRequestHandler(SimpleHTTPRequestHandler):
 
 
 class LocalPagesServer:
-    def __init__(self):
+    def __init__(self, port: int):
         routes = {
             "/bandeja/bandeja.html": str(ACERVO_ROOT / "bandeja" / "bandeja.html"),
             "/social/social.html": str(ACERVO_ROOT / "social" / "social.html"),
             "/spam.html": str(ACERVO_ROOT / "spam.html"),
         }
         handler = partial(LocalPagesRequestHandler, routes=routes)
-        self.server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+        self.server = ThreadingHTTPServer(("127.0.0.1", port), handler)
         self.url = f"http://127.0.0.1:{self.server.server_address[1]}/"
         self.thread = Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
@@ -100,17 +103,27 @@ class LocalPagesServer:
 class AcervoBrowser(QMainWindow):
     """Main browser window for Acervo with metadata capture capabilities."""
 
-    def __init__(self, initial_url: Optional[str] = None, profile_name: str = "acervo"):
+    def __init__(
+        self,
+        initial_url: Optional[str] = None,
+        profile_name: str = "acervo",
+        initial_urls: Optional[list[str]] = None,
+        test_batch: bool = False,
+        remove_test_imports: bool = False,
+    ):
         super().__init__()
         
         self.setWindowTitle("Acervo Browser")
         self.resize(1200, 800)
 
         self.section_servers = [
-            LocalSectionServer(ACERVO_ROOT / "salas-arte" / "dist"),
-            LocalSectionServer(ACERVO_ROOT / "salas-ciencia" / "dist"),
+            LocalSectionServer(ACERVO_ROOT / "salas-arte" / "dist", ARTS_PORT),
+            LocalSectionServer(ACERVO_ROOT / "salas-ciencia" / "dist", SCIENCE_PORT),
         ]
-        self.pages_server = LocalPagesServer()
+        self.pages_server = LocalPagesServer(LOCAL_PAGES_PORT)
+        self.test_batch = test_batch
+        self.source_queue = []
+        self.source_tab = None
         self.arts_url, self.science_url = (
             server.url for server in self.section_servers
         )
@@ -167,7 +180,18 @@ class AcervoBrowser(QMainWindow):
         self.navbar.addAction(self.capture_action)
 
         # Setup initial tab
-        self.new_tab(initial_url, title="Inicio")
+        if remove_test_imports:
+            self.new_tab(
+                f"{self.arts_url}literatura?removeImported=1",
+                title="Remove test imports",
+            )
+        else:
+            urls = initial_urls or ([initial_url] if initial_url else [])
+            if urls:
+                self.source_queue = list(urls[1:])
+                self.source_tab = self.new_tab(urls[0], title="Source 1")
+            else:
+                self.new_tab(title="Inicio")
 
         # Layout
         container = QWidget()
@@ -274,7 +298,31 @@ class AcervoBrowser(QMainWindow):
         view = self.current_view()
         if view is None:
             return
-        self.capture_view(view)
+        self.capture_view(
+            view,
+            callback=lambda metadata: self._save_capture_to_literature(metadata, view),
+        )
+
+    def _save_capture_to_literature(self, metadata, source_view):
+        """Send captured metadata to Literature in the shared browser profile."""
+        source_url = metadata.get("url", "")
+        try:
+            is_web_url = urlsplit(source_url).scheme.lower() in {"http", "https"}
+        except ValueError:
+            is_web_url = False
+        if not is_web_url:
+            print("No se guardó: la pestaña actual no tiene una URL http(s) válida.")
+            return
+
+        params = {"capture": json.dumps(metadata, ensure_ascii=False)}
+        if self.test_batch:
+            params["testImport"] = "1"
+        url = f"{self.arts_url}literatura?{urlencode(params)}"
+        self.new_tab(url, title="Saved to Literature")
+        if self.source_queue and self.tabs.indexOf(source_view) >= 0:
+            next_url = self.source_queue.pop(0)
+            source_view.setUrl(QUrl(next_url))
+            print(f"Captura guardada; cargando siguiente fuente ({len(self.source_queue)} en cola).")
 
     def capture_view(self, view, callback: Optional[Callable] = None):
         """Extract metadata from a web page."""
@@ -383,7 +431,23 @@ class AcervoBrowser(QMainWindow):
               return { ...result, source: host, sourceId: parsedUrl.pathname.match(/\/books\/(OL\d+M)/i)?.[1] || host, url: base };
             }
 
-            return { title: '', author: '', source: host, sourceId: host, url: base, summary: '' };
+            const description = document.querySelector('meta[name="description"]')?.content || '';
+            const author = document.querySelector('meta[name="author"]')?.content
+              || document.querySelector('[rel="author"]')?.textContent
+              || '';
+            const authorLink = document.querySelector('a[rel="author"]')?.href || '';
+            const title = document.querySelector('meta[property="og:title"]')?.content
+              || document.querySelector('h1')?.textContent
+              || document.title;
+            return {
+              title: cleanText(title),
+              author: cleanText(author),
+              authorUrl: authorLink,
+              source: host,
+              sourceId: host,
+              url: base,
+              summary: cleanText(description),
+            };
           } catch (error) {
             return { title: '', author: '', source: '', sourceId: '', url: String(window.location.href || ''), summary: '' };
           }
@@ -429,11 +493,30 @@ def main():
     app.setApplicationName("Acervo Browser")
     
     parser = argparse.ArgumentParser(description="Acervo Browser - Web browser with metadata capture")
-    parser.add_argument("--url", help="Initial URL to load instead of the Acervo home page")
+    parser.add_argument(
+        "--url",
+        action="append",
+        help="URL to test; may be repeated and loaded sequentially after each capture",
+    )
     parser.add_argument("--profile", default="acervo", help="Profile name for storage")
+    parser.add_argument(
+        "--test-batch",
+        action="store_true",
+        help="Mark items saved with 'Save from tab' so the test cleanup script can remove them",
+    )
+    parser.add_argument(
+        "--remove-test-imports",
+        action="store_true",
+        help="Open Literature and remove only items imported by the source-test scripts",
+    )
     args = parser.parse_args()
     
-    browser = AcervoBrowser(initial_url=args.url, profile_name=args.profile)
+    browser = AcervoBrowser(
+        profile_name=args.profile,
+        initial_urls=args.url,
+        test_batch=args.test_batch,
+        remove_test_imports=args.remove_test_imports,
+    )
     browser.show()
     
     sys.exit(app.exec())

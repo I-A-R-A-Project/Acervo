@@ -12,7 +12,8 @@ const SPINE_COLORS = ['forest', 'burgundy', 'navy', 'mustard', 'plum']
 const COLOR_VARS = { forest: 'var(--forest)', burgundy: 'var(--burgundy)', navy: 'var(--navy)', mustard: 'var(--mustard)', plum: 'var(--plum)' }
 
 const STORAGE_KEY = 'artvision-literatura-groups'
-const SCRIPT_IMPORT_BATCH = 'books.txt-script'
+const SCRIPT_IMPORT_BATCH = 'browser-test-script'
+const LEGACY_IMPORT_BATCH = 'books.txt-script'
 
 const EMPTY_GROUPS = [
   { id: 'poesia', label: 'Poetry', items: [] },
@@ -111,6 +112,7 @@ function mergeImportedBook(groups, entry) {
         ...preferred,
         id: item.id,
         tags: [...new Set([...(item.tags || []), ...(entry.tags || [])])],
+        importBatch: item.importBatch || preferred.importBatch,
       }
     }),
   }))
@@ -428,12 +430,52 @@ export default function Literatura() {
     const params = new URLSearchParams(window.location.search)
     const encodedUrls = params.get('import')
     const removeImported = params.get('removeImported') === '1'
+    const capturedMetadata = params.get('capture')
 
     if (removeImported) {
       updateGroups((prev) => prev.map((group) => ({
         ...group,
-        items: group.items.filter((book) => book.importBatch !== SCRIPT_IMPORT_BATCH),
+        items: group.items.filter((book) => (
+          book.importBatch !== SCRIPT_IMPORT_BATCH
+          && book.importBatch !== LEGACY_IMPORT_BATCH
+        )),
       })))
+      return
+    }
+
+    if (capturedMetadata) {
+      try {
+        const metadata = JSON.parse(capturedMetadata)
+        const parsedUrl = new URL(metadata.url)
+        if (!['http:', 'https:'].includes(parsedUrl.protocol)) return
+
+        const source = metadata.source || parsedUrl.hostname.replace(/^www\./i, '')
+        const sourceId = metadata.sourceId || sourceIdForUrl(metadata.url)
+        const summary = String(metadata.summary || '').trim()
+        const entry = {
+          id: `browser-bookmark-${hashId(metadata.url)}`,
+          title: String(metadata.title || '').trim() || titleFromUrl(metadata.url),
+          artist: String(metadata.author || '').trim() || source,
+          sourceId,
+          titleUrl: metadata.url,
+          authorUrl: metadata.authorUrl || '',
+          medium: 'bookmark',
+          tags: ['bookmark', 'browser-capture'],
+          license: 'unknown',
+          source: `${source} — ${sourceId}`,
+          saved: new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric' }),
+          summary,
+          notes: summary || `Saved from Acervo Browser: ${metadata.url}`,
+          importBatch: params.get('testImport') === '1' ? SCRIPT_IMPORT_BATCH : undefined,
+          capturedAt: new Date().toISOString(),
+          metadataComplete: Boolean(metadata.title && metadata.author && summary),
+        }
+        updateGroups((prev) => mergeImportedBook(prev, entry))
+        setActive('poesia')
+        window.history.replaceState(null, '', window.location.pathname)
+      } catch (error) {
+        console.error('Could not import captured browser metadata', error)
+      }
       return
     }
 
