@@ -1,4 +1,4 @@
 *.pyc
-*/package-lock.json
-*/node_modules
-*/dist
+/app/vite/dist
+/app/vite/node_modules
+app/vite/package-lock.json

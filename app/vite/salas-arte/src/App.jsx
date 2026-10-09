@@ -12,7 +12,7 @@ import Videojuegos from './pages/Videojuegos.jsx'
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/salas-arte">
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/literatura" element={<Literatura />} />

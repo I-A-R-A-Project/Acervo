@@ -20,7 +20,7 @@ for import_path in (ROOT, REPOSITORY_ROOT):
     if str(import_path) not in sys.path:
         sys.path.insert(0, str(import_path))
 
-from acervo_browser import ARTS_PORT, LocalSectionServer  # noqa: E402
+from acervo_browser import APP_PORT, LocalSectionServer  # noqa: E402
 from web_common.browser.web_profiles import build_web_profile  # noqa: E402
 
 
@@ -45,7 +45,7 @@ def main():
 
     app = QApplication(sys.argv)
     try:
-        server = LocalSectionServer(ROOT / "salas-arte" / "dist", ARTS_PORT)
+        server = LocalSectionServer(ROOT / "app" / "vite" / "dist", APP_PORT)
     except OSError as error:
         raise SystemExit(
             f"No se pudo abrir el servidor local del catálogo. "
@@ -109,7 +109,7 @@ def main():
         )
 
     page.loadFinished.connect(on_load)
-    page.load(QUrl(f"http://127.0.0.1:{ARTS_PORT}/literatura"))
+    page.load(QUrl(f"http://127.0.0.1:{APP_PORT}/salas-arte/literatura"))
     QTimer.singleShot(
         15000,
         lambda: finish(1, "Tiempo agotado leyendo el catálogo de Literatura."),

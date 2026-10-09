@@ -37,23 +37,32 @@ from web_common.browser.web_profiles import build_web_profile
 from home_page import render_home_page
 
 PROFILE_DIR = Path.home() / ".acervo_browser"
-ARTS_PORT = 8765
-SCIENCE_PORT = 8766
-LOCAL_PAGES_PORT = 8767
+APP_PORT = 8765
 
 
 class SectionRequestHandler(SimpleHTTPRequestHandler):
     """Serve local sections and send client-side routes back to their SPA."""
 
     def translate_path(self, path):
+        request_path = unquote(urlsplit(path).path)
+        is_art_route = request_path == "/salas-arte" or request_path.startswith(
+            "/salas-arte/"
+        )
+        is_science_route = request_path == "/salas-ciencia" or request_path.startswith(
+            "/salas-ciencia/"
+        )
         translated = Path(super().translate_path(path)).resolve()
         root = Path(self.directory).resolve()
         try:
             translated.relative_to(root)
         except ValueError:
             return str(root / "__not_found__")
-        if translated.exists() or Path(urlsplit(path).path).suffix:
+        if translated.exists() or Path(request_path).suffix:
             return str(translated)
+        if is_art_route:
+            return str(root / "salas-arte" / "index.html")
+        if is_science_route:
+            return str(root / "salas-ciencia" / "index.html")
         return str(root / "index.html")
 
 
@@ -62,34 +71,6 @@ class LocalSectionServer:
         if not (directory / "index.html").is_file():
             raise FileNotFoundError(f"No se encontró el index.html de la sección: {directory}")
         handler = partial(SectionRequestHandler, directory=str(directory))
-        self.server = ThreadingHTTPServer(("127.0.0.1", port), handler)
-        self.url = f"http://127.0.0.1:{self.server.server_address[1]}/"
-        self.thread = Thread(target=self.server.serve_forever, daemon=True)
-        self.thread.start()
-
-    def stop(self):
-        self.server.shutdown()
-        self.server.server_close()
-
-
-class LocalPagesRequestHandler(SimpleHTTPRequestHandler):
-    def __init__(self, *args, routes, **kwargs):
-        self.routes = routes
-        super().__init__(*args, **kwargs)
-
-    def translate_path(self, path):
-        route = unquote(urlsplit(path).path)
-        return self.routes.get(route, str(ACERVO_ROOT / "__not_found__"))
-
-
-class LocalPagesServer:
-    def __init__(self, port: int):
-        routes = {
-            "/bandeja/bandeja.html": str(ACERVO_ROOT / "bandeja" / "bandeja.html"),
-            "/social/social.html": str(ACERVO_ROOT / "social" / "social.html"),
-            "/spam.html": str(ACERVO_ROOT / "spam.html"),
-        }
-        handler = partial(LocalPagesRequestHandler, routes=routes)
         self.server = ThreadingHTTPServer(("127.0.0.1", port), handler)
         self.url = f"http://127.0.0.1:{self.server.server_address[1]}/"
         self.thread = Thread(target=self.server.serve_forever, daemon=True)
@@ -116,18 +97,15 @@ class AcervoBrowser(QMainWindow):
         self.setWindowTitle("Acervo Browser")
         self.resize(1200, 800)
 
-        self.section_servers = [
-            LocalSectionServer(ACERVO_ROOT / "salas-arte" / "dist", ARTS_PORT),
-            LocalSectionServer(ACERVO_ROOT / "salas-ciencia" / "dist", SCIENCE_PORT),
-        ]
-        self.pages_server = LocalPagesServer(LOCAL_PAGES_PORT)
+        self.section_server = LocalSectionServer(
+            ACERVO_ROOT / "app" / "vite" / "dist", APP_PORT
+        )
         self.test_batch = test_batch
         self.source_queue = []
         self.source_tab = None
-        self.arts_url, self.science_url = (
-            server.url for server in self.section_servers
-        )
-        self.local_url = self.pages_server.url
+        self.arts_url = f"{self.section_server.url}salas-arte/"
+        self.science_url = f"{self.section_server.url}salas-ciencia/"
+        self.local_url = self.section_server.url
 
         # Setup storage
         PROFILE_DIR.mkdir(parents=True, exist_ok=True)
@@ -479,9 +457,7 @@ class AcervoBrowser(QMainWindow):
 
     def closeEvent(self, event):
         """Clean up on close."""
-        for server in self.section_servers:
-            server.stop()
-        self.pages_server.stop()
+        self.section_server.stop()
         super().closeEvent(event)
 
 

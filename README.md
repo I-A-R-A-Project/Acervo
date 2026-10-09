@@ -58,6 +58,12 @@ Acervo debe ayudarlo a:
 
 ## Forma del producto
 
+### App Vite
+
+El prototipo web reúne Arte, Ciencia, Bandeja, Social y Spam en una sola app
+Vite, dentro de `app/vite/`. Para iniciar el servidor de desarrollo o generar
+el build, seguí la [guía consolidada de la app](app/README.md).
+
 ### 1. Capa de descubrimiento
 
 Acervo reúne obras, publicaciones y artículos desde varias fuentes, según la sala:
@@ -128,11 +134,17 @@ antes de entrar a cualquier sala:
 
 ```text
 Acervo/
-├── app/                     # shell principal de la app de escritorio
-├── salas-arte/              # las 9 salas de arte
-├── salas-ciencia/           # las 8 salas de ciencia (una por disciplina)
-├── bandeja/                 # triage de posts sin clasificar
-├── social/                  # feed de posts de amigos y conocidos
+├── app/
+│   ├── README.md             # shell principal de la app de escritorio
+│   └── vite/                 # aplicación web completa y build multipágina
+│       ├── salas-arte/       # disciplinas de arte y sus fuentes
+│       ├── salas-ciencia/    # ramas de ciencia
+│       ├── bandeja/          # triage de posts sin clasificar
+│       ├── social/           # feed de amigos y conocidos
+│       ├── index.html        # inicio de Acervo
+│       ├── spam.html
+│       ├── package.json      # dependencias compartidas y scripts Vite
+│       └── vite.config.js    # build único para todas las secciones
 ├── discovery/               # scraping lento de redes + adapters por fuente
 ├── models/                  # esquema de metadatos común a todos los ítems
 ├── storage/                 # SQLite / JSON local
@@ -146,10 +158,9 @@ Acervo/
 └── roadmap.md
 ```
 
-`salas-arte` y `salas-ciencia` reutilizan los mismos componentes de `ui/`
-(la lista de subclasificaciones, el panel de detalle, el buscador) en vez de
-duplicar la lógica por disciplina — ya es así en los prototipos actuales de
-ambas. `publishing/` queda separado de `social/` a propósito: `social/` es
+Las salas de Arte y Ciencia viven dentro de `app/vite/` y mantienen sus páginas,
+filtros y paneles de detalle en sus respectivos módulos. `publishing/` queda
+separado de Social a propósito: Social es
 el feed de amigos y conocidos (consumo), `publishing/` son los adapters
 para subir obra propia (producción).
 

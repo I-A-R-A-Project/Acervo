@@ -4,7 +4,7 @@ import SciencePage from './pages/SciencePage.jsx'
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/salas-ciencia">
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/:branchId" element={<SciencePage />} />
