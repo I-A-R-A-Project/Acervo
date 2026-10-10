@@ -4,6 +4,7 @@ import { useArchiveFilter } from '../hooks/useArchiveFilter.js'
 import { hashId } from '../hooks/hashId.js'
 import ShelfList from '../components/ShelfList.jsx'
 import DetailDrawer from '../components/DetailDrawer.jsx'
+import LiteratureDiscovery, { FEEDS, LiteratureDiscoverySidebar } from './LiteratureDiscovery.jsx'
 import './Literatura.css'
 
 const FONTS = 'Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500&family=Courier+Prime:wght@400;700'
@@ -126,6 +127,7 @@ function sourceIdForUrl(url) {
     const matches = [
       path.match(/\/books\/(OL\d+M)/i),
       path.match(/\/ebooks\/(\d+)/i),
+      path.match(/\/ebooks\/([^/]+\/[^/]+)/i),
       path.match(/\/cache\/epub\/(\d+)/i),
       path.match(/\/works\/(\d+)/i),
       path.match(/\/story\/(\d+)/i),
@@ -287,6 +289,31 @@ async function fetchMetadataFromUrl(url) {
           titleUrl: url,
           authorUrl: '',
         }
+      }
+    }
+
+    if (host.includes('standardebooks.org')) {
+      const response = await fetch(url)
+      if (!response.ok) return null
+      const html = await response.text()
+      const titleMatch = html.match(/<h1[^>]*itemprop=["']name["'][^>]*>([\s\S]*?)<\/h1>/i)
+        || html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i)
+        || html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)
+      const authorMatch = html.match(/<a[^>]*rel=["']author["'][^>]*>([\s\S]*?)<\/a>/i)
+        || html.match(/<meta[^>]*name=["']author["'][^>]*content=["']([^"']+)["']/i)
+      const summaryMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i)
+      const title = titleMatch ? stripHtml(titleMatch[1]).replace(/\s*[|—-]\s*Standard Ebooks.*$/i, '').trim() : ''
+      const author = authorMatch ? stripHtml(authorMatch[1]).trim() : ''
+      const summary = summaryMatch ? normaliseSummaryText(stripHtml(summaryMatch[1])) : ''
+
+      return {
+        title,
+        author,
+        summary,
+        source: 'Standard Ebooks',
+        sourceId: parsed.pathname.match(/\/ebooks\/([^/]+\/[^/]+)/i)?.[1] || 'manual',
+        titleUrl: url,
+        authorUrl: '',
       }
     }
 
@@ -557,10 +584,27 @@ export default function Literatura() {
   }, [setActive])
 
   const [selected, setSelected] = useState(null)
+  const [activeTab, setActiveTab] = useState('discovery')
+  const [activeFeedId, setActiveFeedId] = useState(FEEDS[0].id)
   const open = !!selected
 
   function selectBook(book, groupLabel) {
     setSelected({ ...book, groupLabel })
+  }
+
+  function handleTabKeyDown(event) {
+    const tabKeys = ['ArrowLeft', 'ArrowRight', 'Home', 'End']
+    if (!tabKeys.includes(event.key)) return
+
+    const tabs = [...event.currentTarget.parentElement.querySelectorAll('[role="tab"]')]
+    const currentIndex = tabs.indexOf(event.currentTarget)
+    const nextIndex = event.key === 'Home'
+      ? 0
+      : event.key === 'End'
+        ? tabs.length - 1
+        : (currentIndex + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length
+    event.preventDefault()
+    tabs[nextIndex].focus()
   }
 
   async function handleUrlBlur(event) {
@@ -634,26 +678,61 @@ export default function Literatura() {
 
   return (
     <div className="page-literatura">
-      <div className="app">
+      <div className={`app${activeTab === 'discovery' ? ' is-discovery' : ''}`}>
         <header className="topbar">
           <div className="brand">
             <Link className="back" to="/">← Salas de Arte</Link>
             <span className="mark">Literatura</span>
             <span className="room-title">— la sala de lectura</span>
           </div>
-          <div className="search" role="search">
-            <input
-              type="text"
-              placeholder="Search by title, author, or tag…"
-              aria-label="Search the catalog"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
-          <div className="topbar-meta">{totalCount} volúmenes catalogados</div>
+          {activeTab === 'collection' && (
+            <>
+              <div className="search" role="search">
+                <input
+                  type="text"
+                  placeholder="Search by title, author, or tag…"
+                  aria-label="Search the catalog"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </div>
+              <div className="topbar-meta">{totalCount} volúmenes catalogados</div>
+            </>
+          )}
         </header>
 
-        <aside className="sidebar">
+        <div className="literature-tabs" role="tablist" aria-label="Literature room views">
+          <button
+            id="literature-tab-discovery"
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'discovery'}
+            aria-controls={activeTab === 'discovery' ? 'literature-panel-discovery' : undefined}
+            tabIndex={activeTab === 'discovery' ? 0 : -1}
+            onKeyDown={handleTabKeyDown}
+            onClick={() => setActiveTab('discovery')}
+          >
+            Discover
+          </button>
+          <button
+            id="literature-tab-collection"
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'collection'}
+            aria-controls={activeTab === 'collection' ? 'literature-panel-collection' : undefined}
+            tabIndex={activeTab === 'collection' ? 0 : -1}
+            onKeyDown={handleTabKeyDown}
+            onClick={() => setActiveTab('collection')}
+          >
+            My collection <span>{totalCount}</span>
+          </button>
+        </div>
+
+        {activeTab === 'discovery' ? (
+          <aside className="sidebar discovery-sidebar">
+            <LiteratureDiscoverySidebar activeFeedId={activeFeedId} onSelectFeed={setActiveFeedId} />
+          </aside>
+        ) : <aside className="sidebar">
           <h2>Estantes</h2>
           <ShelfList groups={groups} allLabel="Todos los estantes" active={active} onSelect={setActive} counts={countsByGroup} />
 
@@ -705,7 +784,7 @@ export default function Literatura() {
                   type="text"
                   value={form.source}
                   onChange={(e) => setForm((prev) => ({ ...prev, source: e.target.value }))}
-                  placeholder="OpenLibrary, Gutenberg, Wattpad..."
+                  placeholder="Standard Ebooks, Open Library, Gutenberg, Wattpad..."
                   required
                 />
               </label>
@@ -726,48 +805,56 @@ export default function Literatura() {
             Each spine is a saved piece.<br />
             Click a spine to open its <b>catalog card</b> — author, medium, license, and notes.
           </div>
-        </aside>
+        </aside>}
 
         <main className="main">
-          <div className="main-heading">
-            <div>
-              <h1>Literature shelf</h1>
-              <p>Texts and articles saved from blogs, magazines, and independent publications.</p>
+          {activeTab === 'discovery' ? (
+            <div className="discovery-panel" id="literature-panel-discovery" role="tabpanel" aria-labelledby="literature-tab-discovery">
+              <LiteratureDiscovery activeFeedId={activeFeedId} />
             </div>
-            <div className="result-count">{visibleCount} in view</div>
-          </div>
-
-          {visibleGroups.map((group, gi) => (
-            <div className="shelf-unit" key={group.id}>
-              <div className="shelf-unit-label">{group.label} · {group.items.length}</div>
-              <div className="shelf-row">
-                {group.items.map((book, i) => {
-                  const st = bookStyle(book)
-                  return (
-                    <button
-                      key={book.id}
-                      className="book"
-                      style={{ '--w': `${st.width}px`, '--h': `${st.height}px`, '--spine': COLOR_VARS[st.color], '--i': gi * 3 + i }}
-                      aria-pressed={selected?.id === book.id}
-                      title={`${book.title} — ${book.artist}`}
-                      onClick={() => selectBook(book, group.label)}
-                    >
-                      <span className="spine-cap" />
-                      <span className="spine-band top" />
-                      <span className="spine-title">{book.title}</span>
-                      <span className="spine-band bottom" />
-                    </button>
-                  )
-                })}
+          ) : (
+            <div id="literature-panel-collection" role="tabpanel" aria-labelledby="literature-tab-collection">
+              <div className="main-heading">
+                <div>
+                  <h1>Literature shelf</h1>
+                  <p>Texts and articles saved from blogs, magazines, and independent publications.</p>
+                </div>
+                <div className="result-count">{visibleCount} in view</div>
               </div>
+
+              {visibleGroups.map((group, gi) => (
+                <div className="shelf-unit" key={group.id}>
+                  <div className="shelf-unit-label">{group.label} · {group.items.length}</div>
+                  <div className="shelf-row">
+                    {group.items.map((book, i) => {
+                      const st = bookStyle(book)
+                      return (
+                        <button
+                          key={book.id}
+                          className="book"
+                          style={{ '--w': `${st.width}px`, '--h': `${st.height}px`, '--spine': COLOR_VARS[st.color], '--i': gi * 3 + i }}
+                          aria-pressed={selected?.id === book.id}
+                          title={`${book.title} — ${book.artist}`}
+                          onClick={() => selectBook(book, group.label)}
+                        >
+                          <span className="spine-cap" />
+                          <span className="spine-band top" />
+                          <span className="spine-title">{book.title}</span>
+                          <span className="spine-band bottom" />
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+              {visibleCount === 0 && <div className="empty-state">There are no volumes in this shelf yet.</div>}
             </div>
-          ))}
-          {visibleCount === 0 && <div className="empty-state">There are no volumes in this shelf yet.</div>}
+          )}
         </main>
       </div>
 
-      <DetailDrawer open={open} onClose={() => setSelected(null)} className="">
-        {selected && (
+      <DetailDrawer open={open && activeTab === 'collection'} onClose={() => setSelected(null)} className="">
+        {selected && activeTab === 'collection' && (
           <article className="catalog-card">
             <button className="card-close" data-autofocus onClick={() => setSelected(null)} aria-label="Close card">✕</button>
             <span className="guide-tab" style={{ background: COLOR_VARS[bookStyle(selected).color] }}>{selected.groupLabel}</span>
@@ -785,6 +872,21 @@ export default function Literatura() {
             <div className="notes-block">{selected.notes || 'No notes yet. Add context for future publishing.'}</div>
             <span className="stamp">{selected.license === 'public domain' ? 'Public domain' : selected.license === 'unknown' ? 'License unconfirmed' : 'Saved item'}</span>
             <div className="card-actions">
+              {selected.titleUrl && /standardebooks\.org|gutenberg\.org/i.test(selected.titleUrl) && (
+                <a className="btn-ghost" href={selected.titleUrl} target="_blank" rel="noreferrer">Download options</a>
+              )}
+              {selected.titleUrl && /standardebooks\.org/i.test(selected.titleUrl) && (
+                <a className="btn-ghost" href="https://standardebooks.org/donate" target="_blank" rel="noreferrer">Donate</a>
+              )}
+              {selected.titleUrl && /archiveofourown\.org/i.test(selected.titleUrl) && (
+                <a className="btn-ghost" href="https://archiveofourown.org/donate" target="_blank" rel="noreferrer">Donate</a>
+              )}
+              {selected.titleUrl && /openlibrary\.org/i.test(selected.titleUrl) && (
+                <a className="btn-ghost" href="https://archive.org/donate/?platform=ol&origin=olwww-TopNavDonateButton" target="_blank" rel="noreferrer">Donate</a>
+              )}
+              {selected.titleUrl && /gutenberg\.org/i.test(selected.titleUrl) && (
+                <a className="btn-ghost" href="https://www.gutenberg.org/donate/" target="_blank" rel="noreferrer">Donate</a>
+              )}
               <button className="btn-danger" onClick={() => removeBook(selected.id)}>Delete bookmark</button>
             </div>
           </article>

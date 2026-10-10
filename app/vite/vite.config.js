@@ -4,6 +4,43 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 const root = fileURLToPath(new URL('.', import.meta.url))
+const literatureFeedProxies = {
+  '/api/feeds/ao3': {
+    target: 'https://archiveofourown.org',
+    rewrite: () => '/admin_posts.rss',
+    headers: { Accept: 'application/rss+xml, application/xml, text/xml' },
+  },
+  '/api/feeds/standard-ebooks/atom': {
+    target: 'https://standardebooks.org',
+    rewrite: () => '/feeds/atom/new-releases',
+    headers: { Accept: 'application/atom+xml, application/xml' },
+  },
+  '/api/feeds/standard-ebooks/blog': {
+    target: 'https://standardebooks.org',
+    rewrite: () => '/feeds/atom/blog',
+    headers: { Accept: 'application/atom+xml, application/xml' },
+  },
+  '/api/feeds/standard-ebooks/opds': {
+    target: 'https://standardebooks.org',
+    rewrite: () => '/feeds/opds',
+    headers: { Accept: 'application/opds+json' },
+  },
+  '/api/feeds/gutenberg/rss': {
+    target: 'https://www.gutenberg.org',
+    rewrite: () => '/cache/epub/feeds/today.rss',
+    headers: { Accept: 'application/rss+xml, application/xml, text/xml' },
+  },
+  '/api/feeds/gutenberg/opds': {
+    target: 'https://www.gutenberg.org',
+    rewrite: () => '/ebooks/search.opds/',
+    headers: { Accept: 'application/atom+xml;profile=opds-catalog, application/atom+xml, application/xml' },
+  },
+}
+
+for (const proxy of Object.values(literatureFeedProxies)) {
+  proxy.changeOrigin = true
+  proxy.headers['User-Agent'] = 'Acervo Literature RSS reader'
+}
 
 function sectionRouteFallback() {
   const install = (server) => {
@@ -33,6 +70,12 @@ function sectionRouteFallback() {
 
 export default defineConfig({
   plugins: [react(), sectionRouteFallback()],
+  server: {
+    proxy: literatureFeedProxies,
+  },
+  preview: {
+    proxy: literatureFeedProxies,
+  },
   build: {
     rollupOptions: {
       input: {

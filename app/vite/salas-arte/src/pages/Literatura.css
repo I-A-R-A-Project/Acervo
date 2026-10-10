@@ -30,9 +30,9 @@
 
 .page-literatura .app{
   display:grid;
-  grid-template-columns: 232px 1fr;
-  grid-template-rows: 72px 1fr;
-  grid-template-areas: "top top" "side main";
+  grid-template-columns: 252px minmax(0, 1fr);
+  grid-template-rows: 72px auto minmax(0, 1fr);
+  grid-template-areas: "top top" "tabs tabs" "side main";
   min-height:100vh;
 }
 
@@ -41,6 +41,10 @@
   padding:0 28px; background:linear-gradient(180deg, rgba(0,0,0,0.25), transparent);
   border-bottom:1px solid rgba(184,139,78,0.18);
 }
+.page-literatura .literature-tabs{ grid-area:tabs; display:flex; gap:8px; padding:0 34px; border-bottom:1px solid rgba(184,139,78,0.24); }
+.page-literatura .literature-tabs button{ cursor:pointer; padding:10px 16px; border:0; border-bottom:2px solid transparent; background:transparent; color:rgba(239,227,200,0.56); font:600 13px 'Courier Prime', monospace; }
+.page-literatura .literature-tabs button[aria-selected="true"]{ border-bottom-color:var(--brass-lt); color:var(--brass-lt); }
+.page-literatura .literature-tabs button span{ margin-left:6px; color:rgba(239,227,200,0.45); font-size:11px; }
 .page-literatura .brand{ display:flex; align-items:baseline; gap:10px; }
 .page-literatura .brand .back{ font-family:'Courier Prime', monospace; font-size:11px; color:rgba(239,227,200,0.45); text-decoration:none; margin-right:4px; }
 .page-literatura .brand .back:hover{ color:var(--brass-lt); }
@@ -119,12 +123,58 @@
 .page-literatura .btn-danger{ background:transparent; border:1px solid var(--danger) !important; color:var(--danger); }
 .page-literatura .btn-danger:hover{ background:rgba(140,59,46,0.1); }
 
+.page-literatura .app.is-discovery{ grid-template-columns:252px minmax(0,1fr); grid-template-areas:"top top" "tabs tabs" "side main"; }
+.page-literatura .main{ min-width:0; }
+.page-literatura .discovery-panel{ min-width:0; }
+.page-literatura .discovery-sidebar{ padding-top:22px; }
+.page-literatura .discovery-source-section>h1{ margin:0 0 22px 2px; color:var(--paper); font:700 19px 'Fraunces', serif; line-height:1.25; }
+.page-literatura .discovery-source{ margin:0 0 24px; }
+.page-literatura .discovery-source h2{ margin:0 0 8px 2px; color:var(--brass-lt); font:700 11px 'Courier Prime', monospace; letter-spacing:.06em; }
+.page-literatura .discovery-source>p{ margin:8px 2px; color:rgba(239,227,200,0.48); font-size:11px; line-height:1.5; }
+.page-literatura .discovery-feed-link{ all:unset; box-sizing:border-box; cursor:pointer; display:flex; align-items:flex-start; justify-content:space-between; gap:8px; width:100%; padding:8px 9px; border-radius:4px; color:rgba(239,227,200,0.7); font:12px 'Inter',sans-serif; }
+.page-literatura .discovery-feed-link:hover,.page-literatura .discovery-feed-link[aria-current="page"]{ background:rgba(184,139,78,0.15); color:var(--brass-lt); }
+.page-literatura .discovery-feed-link span:last-child{ flex:none; color:rgba(239,227,200,0.38); font:9px 'Courier Prime',monospace; text-transform:uppercase; }
+.page-literatura .discovery-source-links{ display:flex; flex-direction:column; gap:2px; padding:0 9px; }
+.page-literatura .discovery-source-links a{ color:rgba(239,227,200,0.48); font-size:11px; line-height:1.5; text-decoration:none; }
+.page-literatura .discovery-source-links a:hover{ color:var(--paper); text-decoration:underline; text-underline-offset:3px; }
+.page-literatura .discovery-source-links a.is-donate{ color:rgba(216,185,104,0.75); }
+.page-literatura .discovery-feed{ max-width:960px; padding:28px 34px 40px; }
+.page-literatura .literature-eyebrow{ color:var(--brass-lt); font:700 10px 'Courier Prime', monospace; letter-spacing:.15em; text-transform:uppercase; }
+.page-literatura .literature-section-heading{ display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:16px; }
+.page-literatura .literature-section-heading h1{ margin:5px 0 4px; color:var(--paper); font:700 clamp(21px, 2.2vw, 28px) 'Fraunces', serif; }
+.page-literatura .literature-section-heading p{ max-width:60ch; margin:0; color:rgba(239,227,200,0.58); font-size:13px; line-height:1.6; }
+.page-literatura .literature-section-heading p a{ color:var(--brass-lt); text-decoration-color:rgba(216,185,104,.4); text-underline-offset:3px; }
+.page-literatura .literature-refresh{ cursor:pointer; flex:none; border:1px solid rgba(184,139,78,0.4); border-radius:3px; padding:8px 12px; background:rgba(184,139,78,0.1); color:var(--brass-lt); font:600 11px 'Courier Prime', monospace; }
+.page-literatura .literature-refresh:disabled{ opacity:.6; cursor:wait; }
+.page-literatura .literature-feed-message{ padding:18px; border:1px solid rgba(184,139,78,0.22); color:rgba(239,227,200,0.72); font-size:13px; line-height:1.6; }
+.page-literatura .literature-feed-message.is-error{ border-color:rgba(216,105,87,0.4); }
+.page-literatura .literature-post-list{ display:flex; flex-direction:column; gap:10px; }
+.page-literatura .literature-post-card{ padding:16px 18px; border:1px solid rgba(184,139,78,0.2); border-radius:4px; background:linear-gradient(145deg, rgba(255,255,255,0.035), rgba(0,0,0,0.13)); }
+.page-literatura .literature-post-card h2{ margin:0; color:var(--paper); font:700 18px 'Fraunces', serif; line-height:1.3; }
+.page-literatura .literature-post-card h2 a{ color:inherit; text-decoration-color:var(--brass); text-underline-offset:3px; }
+.page-literatura .literature-post-card time{ color:rgba(239,227,200,0.42); font:11px 'Courier Prime', monospace; }
+.page-literatura .literature-post-meta{ margin:5px 0 0; color:rgba(239,227,200,0.42); font:11px 'Courier Prime', monospace; }
+.page-literatura .literature-post-description{ margin:10px 0 0; color:rgba(239,227,200,0.65); font-size:13px; line-height:1.6; }
+.page-literatura .literature-post-downloads{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+.page-literatura .literature-post-downloads a{ padding:6px 9px; border:1px solid rgba(184,139,78,0.35); border-radius:3px; color:var(--brass-lt); font:10px 'Courier Prime',monospace; text-decoration:none; }
+.page-literatura .literature-post-downloads a:hover{ background:rgba(184,139,78,0.12); }
+.page-literatura .card-actions a{ all:unset; cursor:pointer; font-family:'Inter'; font-weight:600; font-size:12.5px; padding:10px 16px; border-radius:3px; text-align:center; }
+.page-literatura .card-actions a:hover{ background:rgba(0,0,0,0.06); }
+
 @media (max-width: 880px){
-  .page-literatura .app{ grid-template-columns:1fr; grid-template-rows:auto auto 1fr; grid-template-areas:"top" "side" "main"; }
+  .page-literatura .app{ grid-template-columns:1fr; grid-template-rows:auto auto auto 1fr; grid-template-areas:"top" "tabs" "side" "main"; }
+  .page-literatura .app.is-discovery{ grid-template-columns:1fr; grid-template-rows:auto auto auto 1fr; grid-template-areas:"top" "tabs" "side" "main"; }
   .page-literatura .sidebar{ border-right:none; border-bottom:1px solid rgba(184,139,78,0.15); padding:16px 18px; }
   .page-literatura .flist{ flex-direction:row; flex-wrap:wrap; margin-bottom:14px; }
   .page-literatura .card-index{ display:none; }
   .page-literatura .search{ width:180px; }
+  .page-literatura .main{ padding:20px 18px 32px; }
+  .page-literatura .literature-tabs{ padding:0 18px; }
+  .page-literatura .discovery-sidebar{ max-height:36vh; overflow:auto; }
+  .page-literatura .discovery-source-section>h1{ margin-bottom:12px; }
+  .page-literatura .discovery-source{ margin-bottom:16px; }
+  .page-literatura .discovery-feed{ padding:20px 18px 32px; }
+  .page-literatura .literature-section-heading{ align-items:flex-start; }
   .page-literatura .catalog-card{ max-height:88vh; border-radius:14px 14px 0 0; transform:none; }
   .page-literatura .catalog-card::before{ display:none; }
 }

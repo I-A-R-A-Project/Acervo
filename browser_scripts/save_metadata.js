@@ -76,11 +76,36 @@
     };
   };
 
+  const saveStandardEbooks = () => {
+    const titleNode = document.querySelector('h1[itemprop="name"]')
+      || document.querySelector('h1.title')
+      || document.querySelector('h1');
+    const authorNode = document.querySelector('a[rel="author"]')
+      || document.querySelector('[itemprop="author"] a');
+    const summaryNode = document.querySelector('meta[name="description"]')
+      || document.querySelector('meta[property="og:description"]');
+    return {
+      title: cleanText(
+        document.querySelector('meta[property="og:title"]')?.content
+        || titleNode?.textContent
+        || document.title.replace(/\s*[|—-]\s*Standard Ebooks.*$/i, ''),
+      ),
+      author: cleanText(authorNode?.textContent || document.querySelector('[itemprop="author"]')?.textContent || ''),
+      authorUrl: authorNode?.href || '',
+      summary: cleanText(summaryNode?.content || ''),
+    };
+  };
+
   try {
     const base = document.baseURI || window.location.href;
     const parsedUrl = new URL(base);
     const host = parsedUrl.hostname.replace(/^www\./, '').toLowerCase();
 
+    if (host.includes('standardebooks.org')) {
+      const result = saveStandardEbooks();
+      const bookSlug = parsedUrl.pathname.match(/\/ebooks\/([^/]+\/[^/]+)/i)?.[1];
+      return { ...result, source: 'Standard Ebooks', sourceId: bookSlug || host, url: base };
+    }
     if (host.includes('gutenberg.org')) {
       const result = saveGutenberg();
       const idMatch = parsedUrl.pathname.match(/\/ebooks\/(\d+)|\/cache\/epub\/(\d+)/i);
