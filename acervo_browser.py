@@ -12,9 +12,23 @@ from threading import Thread
 from typing import Optional, Callable
 from urllib.parse import unquote, urlencode, urlsplit
 
-from PyQt6.QtCore import QUrl
+from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QApplication, QMainWindow, QTabWidget, QVBoxLayout, QWidget
+from PyQt6.QtWebEngineCore import QWebEnginePage
+from PyQt6.QtWidgets import (
+    QApplication,
+    QDialog,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QMessageBox,
+    QPlainTextEdit,
+    QPushButton,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
 
 # Add repository root to path for imports
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -38,6 +52,19 @@ from home_page import render_home_page
 
 PROFILE_DIR = Path.home() / ".acervo_browser"
 APP_PORT = 8765
+BROWSER_SCRIPTS_DIR = ACERVO_ROOT / "browser_scripts"
+
+
+def load_browser_script(name: str) -> str:
+    return (BROWSER_SCRIPTS_DIR / name).read_text(encoding="utf-8")
+
+
+def is_http_url(value: str) -> bool:
+    try:
+        parsed = urlsplit(value)
+        return parsed.scheme.lower() in {"http", "https"} and bool(parsed.netloc)
+    except ValueError:
+        return False
 
 
 class SectionRequestHandler(SimpleHTTPRequestHandler):
@@ -82,15 +109,12 @@ class LocalSectionServer:
 
 
 class AcervoBrowser(QMainWindow):
-    """Main browser window for Acervo with metadata capture capabilities."""
+    """Main browser window for Acervo."""
 
     def __init__(
         self,
         initial_url: Optional[str] = None,
         profile_name: str = "acervo",
-        initial_urls: Optional[list[str]] = None,
-        test_batch: bool = False,
-        remove_test_imports: bool = False,
     ):
         super().__init__()
         
@@ -100,9 +124,6 @@ class AcervoBrowser(QMainWindow):
         self.section_server = LocalSectionServer(
             ACERVO_ROOT / "app" / "vite" / "dist", APP_PORT
         )
-        self.test_batch = test_batch
-        self.source_queue = []
-        self.source_tab = None
         self.arts_url = f"{self.section_server.url}salas-arte/"
         self.science_url = f"{self.section_server.url}salas-ciencia/"
         self.local_url = self.section_server.url
@@ -151,25 +172,18 @@ class AcervoBrowser(QMainWindow):
             save_handler=lambda: save_web_page(self.current_view()),
         )
 
-        # Add "Save from tab" action
-        self.capture_action = QAction("Save from tab", self)
-        self.capture_action.setToolTip("Capture the current page metadata")
-        self.capture_action.triggered.connect(self.capture_current_tab)
+        self.capture_action = QAction("Import", self)
+        self.capture_action.setToolTip(
+            "Import the current page; Shift-click to import or export multiple links"
+        )
+        self.capture_action.triggered.connect(self._on_import_action)
         self.navbar.addAction(self.capture_action)
 
         # Setup initial tab
-        if remove_test_imports:
-            self.new_tab(
-                f"{self.arts_url}literatura?removeImported=1",
-                title="Remove test imports",
-            )
+        if initial_url:
+            self.new_tab(initial_url, title="Source")
         else:
-            urls = initial_urls or ([initial_url] if initial_url else [])
-            if urls:
-                self.source_queue = list(urls[1:])
-                self.source_tab = self.new_tab(urls[0], title="Source 1")
-            else:
-                self.new_tab(title="Inicio")
+            self.new_tab(title="Inicio")
 
         # Layout
         container = QWidget()
@@ -271,6 +285,256 @@ class AcervoBrowser(QMainWindow):
         )
         dialog.exec()
 
+    def _on_import_action(self):
+        if QApplication.keyboardModifiers() & Qt.KeyboardModifier.ShiftModifier:
+            self.show_link_transfer_dialog()
+        else:
+            self.capture_current_tab()
+
+    def show_link_transfer_dialog(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Importar / exportar enlaces")
+        dialog.resize(560, 420)
+
+        layout = QVBoxLayout(dialog)
+        layout.addWidget(QLabel(
+            "Pegá enlaces http(s), uno por línea. Podés cargar o guardar la lista como archivo."
+        ))
+        links_input = QPlainTextEdit()
+        links_input.setPlaceholderText("https://ejemplo.com/obra\nhttps://ejemplo.com/articulo")
+        layout.addWidget(links_input)
+
+        actions = QHBoxLayout()
+        load_button = QPushButton("Cargar archivo")
+        import_button = QPushButton("Importar enlaces")
+        export_button = QPushButton("Exportar lista")
+        export_catalog_button = QPushButton("Exportar colección (JSON)")
+        close_button = QPushButton("Cerrar")
+        for button in (
+            load_button,
+            import_button,
+            export_button,
+            export_catalog_button,
+            close_button,
+        ):
+            actions.addWidget(button)
+        layout.addLayout(actions)
+
+        def get_valid_links():
+            links = list(dict.fromkeys(
+                line.strip()
+                for line in links_input.toPlainText().splitlines()
+                if line.strip()
+            ))
+            valid = []
+            invalid = []
+            for link in links:
+                if is_http_url(link):
+                    valid.append(link)
+                else:
+                    invalid.append(link)
+            return valid, invalid
+
+        def load_links():
+            path, _ = QFileDialog.getOpenFileName(
+                dialog,
+                "Cargar enlaces",
+                "",
+                "Archivos de texto (*.txt);;Todos los archivos (*)",
+            )
+            if not path:
+                return
+            try:
+                links_input.setPlainText(Path(path).read_text(encoding="utf-8"))
+            except OSError as error:
+                QMessageBox.critical(dialog, "No se pudo cargar", str(error))
+
+        def import_links():
+            links, invalid = get_valid_links()
+            if invalid:
+                QMessageBox.warning(
+                    dialog,
+                    "Enlaces inválidos",
+                    "Todos los enlaces deben usar http:// o https://.\n\n"
+                    + "\n".join(invalid[:5]),
+                )
+                return
+            if not links:
+                QMessageBox.information(
+                    dialog, "Sin enlaces", "Agregá al menos un enlace para importar."
+                )
+                return
+            self._import_link_batch(links)
+            dialog.accept()
+
+        def export_links():
+            links, invalid = get_valid_links()
+            if invalid:
+                QMessageBox.warning(
+                    dialog,
+                    "Enlaces inválidos",
+                    "Solo se pueden exportar enlaces http(s).\n\n"
+                    + "\n".join(invalid[:5]),
+                )
+                return
+            if not links:
+                QMessageBox.information(
+                    dialog, "Sin enlaces", "Agregá al menos un enlace para exportar."
+                )
+                return
+            path, _ = QFileDialog.getSaveFileName(
+                dialog, "Exportar enlaces", "enlaces.txt", "Archivos de texto (*.txt)"
+            )
+            if not path:
+                return
+            try:
+                Path(path).write_text("\n".join(links) + "\n", encoding="utf-8")
+            except OSError as error:
+                QMessageBox.critical(dialog, "No se pudo exportar", str(error))
+
+        load_button.clicked.connect(load_links)
+        import_button.clicked.connect(import_links)
+        export_button.clicked.connect(export_links)
+        export_catalog_button.clicked.connect(
+            lambda: self._export_literature_collection(dialog)
+        )
+        close_button.clicked.connect(dialog.reject)
+        dialog.exec()
+
+    def _import_link_batch(self, links):
+        page = QWebEnginePage(self.profile, self)
+        pending = iter(links)
+        metadata_items = []
+        failed_urls = []
+        current_url = {"value": None}
+
+        def import_captured_items():
+            page.deleteLater()
+            if not metadata_items:
+                QMessageBox.warning(
+                    self,
+                    "No se pudo importar",
+                    "No se pudo extraer información de los enlaces.",
+                )
+                return
+            query = urlencode({
+                "captureBatch": json.dumps(metadata_items, ensure_ascii=False)
+            })
+            self.new_tab(
+                f"{self.arts_url}literatura?{query}",
+                title=f"Importados {len(metadata_items)} enlaces",
+            )
+            if failed_urls:
+                QMessageBox.warning(
+                    self,
+                    "Importación parcial",
+                    f"Se importaron {len(metadata_items)} enlaces, pero no se pudo "
+                    "abrir correctamente:\n\n" + "\n".join(failed_urls[:8]),
+                )
+
+        def load_next_url():
+            try:
+                current_url["value"] = next(pending)
+            except StopIteration:
+                import_captured_items()
+                return
+            page.load(QUrl(current_url["value"]))
+
+        def on_metadata_loaded(result):
+            url = current_url["value"]
+            if not isinstance(result, dict):
+                result = {}
+                failed_urls.append(url)
+            elif not any(result.get(field) for field in ("title", "author", "summary")):
+                failed_urls.append(url)
+            actual_url = result.get("url") or url
+            parsed = urlsplit(actual_url)
+            fallback_source = parsed.hostname or urlsplit(url).hostname or ""
+            metadata_items.append({
+                "title": result.get("title") or "",
+                "author": result.get("author") or "",
+                "authorUrl": result.get("authorUrl") or "",
+                "source": result.get("source") or fallback_source,
+                "sourceId": result.get("sourceId") or fallback_source,
+                "url": actual_url,
+                "summary": result.get("summary") or "",
+            })
+            load_next_url()
+
+        def on_page_loaded(ok):
+            url = current_url["value"]
+            if not ok:
+                failed_urls.append(url)
+                host = urlsplit(url).hostname or ""
+                metadata_items.append({
+                    "title": "",
+                    "author": "",
+                    "authorUrl": "",
+                    "source": host,
+                    "sourceId": host,
+                    "url": url,
+                    "summary": "",
+                })
+                load_next_url()
+                return
+            page.runJavaScript(
+                load_browser_script("save_metadata.js"),
+                on_metadata_loaded,
+            )
+
+        page.loadFinished.connect(on_page_loaded)
+        load_next_url()
+
+    def _export_literature_collection(self, dialog):
+        page = QWebEnginePage(self.profile, dialog)
+
+        def on_collection_loaded(groups):
+            self._save_exported_collection(dialog, groups)
+            page.deleteLater()
+
+        def on_catalog_loaded(ok):
+            if not ok:
+                QMessageBox.critical(
+                    dialog, "No se pudo exportar", "No se pudo abrir el catálogo de Literatura."
+                )
+                page.deleteLater()
+                return
+            page.runJavaScript(
+                load_browser_script("export_literature_collection.js"),
+                on_collection_loaded,
+            )
+
+        page.loadFinished.connect(on_catalog_loaded)
+        page.load(QUrl(f"{self.arts_url}literatura"))
+
+    @staticmethod
+    def _save_exported_collection(dialog, groups):
+        if not isinstance(groups, list):
+            QMessageBox.critical(
+                dialog, "No se pudo exportar", "No se pudo leer la colección de Literatura."
+            )
+            return
+        if not groups:
+            QMessageBox.information(
+                dialog, "Colección vacía", "La colección de Literatura no contiene datos para exportar."
+            )
+            return
+        path, _ = QFileDialog.getSaveFileName(
+            dialog, "Exportar colección", "acervo-coleccion.json", "Archivos JSON (*.json)"
+        )
+        if not path:
+            return
+        output_path = Path(path)
+        if output_path.suffix.lower() != ".json":
+            output_path = output_path.with_suffix(".json")
+        try:
+            output_path.write_text(
+                json.dumps(groups, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+        except OSError as error:
+            QMessageBox.critical(dialog, "No se pudo exportar", str(error))
+
     def capture_current_tab(self):
         """Capture metadata from the current tab."""
         view = self.current_view()
@@ -278,10 +542,10 @@ class AcervoBrowser(QMainWindow):
             return
         self.capture_view(
             view,
-            callback=lambda metadata: self._save_capture_to_literature(metadata, view),
+            callback=self._save_capture_to_literature,
         )
 
-    def _save_capture_to_literature(self, metadata, source_view):
+    def _save_capture_to_literature(self, metadata):
         """Send captured metadata to Literature in the shared browser profile."""
         source_url = metadata.get("url", "")
         try:
@@ -293,144 +557,13 @@ class AcervoBrowser(QMainWindow):
             return
 
         params = {"capture": json.dumps(metadata, ensure_ascii=False)}
-        if self.test_batch:
-            params["testImport"] = "1"
         url = f"{self.arts_url}literatura?{urlencode(params)}"
-        self.new_tab(url, title="Saved to Literature")
-        if self.source_queue and self.tabs.indexOf(source_view) >= 0:
-            next_url = self.source_queue.pop(0)
-            source_view.setUrl(QUrl(next_url))
-            print(f"Captura guardada; cargando siguiente fuente ({len(self.source_queue)} en cola).")
+        self.new_tab(url, title="Imported to Literature")
 
     def capture_view(self, view, callback: Optional[Callable] = None):
-        """Extract metadata from a web page."""
+        """Save metadata from a web page."""
         if view is None:
             return
-
-        script = r'''
-        (() => {
-          const cleanText = (value) => String(value || '').replace(/\s+/g, ' ').replace(/\u00A0/g, ' ').trim();
-          const stripHtml = (value) => cleanText(String(value || '').replace(/<[^>]+>/g, ' '));
-
-          const extractGutenberg = () => {
-            const table = document.querySelector('table.bibrec#about_book_table');
-            if (!table) {
-              return {
-                title: cleanText(document.querySelector('h1')?.textContent || document.title)
-                  .replace(/\s*[|—-]\s*Project Gutenberg.*$/i, ''),
-                author: cleanText(document.querySelector('[itemprop="author"]')?.textContent || ''),
-                summary: cleanText(document.querySelector('meta[name="description"]')?.content || ''),
-              };
-            }
-
-            const rows = [...table.querySelectorAll('tr')];
-            const titleRow = rows.find((row) => /^\s*Title\s*$/i.test(row.querySelector('th')?.textContent || ''));
-            const authorRow = rows.find((row) => /^\s*Author\s*$/i.test(row.querySelector('th')?.textContent || ''));
-            const title = cleanText(stripHtml(titleRow?.querySelector('td')?.innerHTML || ''));
-            const author = cleanText(stripHtml(authorRow?.querySelector('td')?.innerHTML || ''));
-            const summaryNode = document.querySelector('div.summary-text-container');
-            return {
-              title,
-              author,
-              authorUrl: authorRow?.querySelector('a')?.href || '',
-              summary: summaryNode ? cleanText(stripHtml(summaryNode.innerHTML)) : '',
-            };
-          };
-
-          const extractWattpad = () => {
-            const titleNode = document.querySelector('h1[data-testid="title"]') || document.querySelector('h1');
-            const authorNode = document.querySelector('a[href*="/user/"]');
-            const summaryNodes = [...document.querySelectorAll('div.typography-paragraph-small')];
-            const summary = summaryNodes
-              .map((node) => cleanText(stripHtml(node.innerHTML)))
-              .find((text) => text.length > 80 && !/^(Reads|Votes|Parts|Complete|Movie|Print|Fiction|Romance|Tags)/i.test(text)) || '';
-
-            return {
-              title: cleanText(titleNode?.textContent || ''),
-              author: cleanText(authorNode?.textContent || ''),
-              authorUrl: authorNode?.href || '',
-              summary,
-            };
-          };
-
-          const extractAO3 = () => {
-            const authorNode = document.querySelector('a[rel="author"]');
-            const summaryNode = document.querySelector('div.summary.module blockquote.userstuff p');
-            return {
-              title: cleanText(document.querySelector('h2.title.heading')?.textContent || ''),
-              author: cleanText(authorNode?.textContent || ''),
-              authorUrl: authorNode?.href || '',
-              summary: cleanText(stripHtml(summaryNode?.innerHTML || '')),
-            };
-          };
-
-          const extractOpenLibrary = () => {
-            const summaryNode = document.querySelector('ol-read-more.book-description p');
-            return {
-              title: cleanText(
-                document.querySelector('h1.work-title[itemprop="name"]')?.textContent
-                || document.querySelector('h1')?.textContent
-                || document.title.replace(/\s*[|—-]\s*Open Library.*$/i, ''),
-              ),
-              author: cleanText(
-                document.querySelector('a[href*="/authors/"]')?.textContent
-                || document.querySelector('[itemprop="author"]')?.textContent
-                || '',
-              ),
-              authorUrl: document.querySelector('a[href*="/authors/"]')?.href || '',
-              summary: cleanText(
-                stripHtml(summaryNode?.innerHTML || '')
-                || document.querySelector('meta[name="description"]')?.content
-                || '',
-              ),
-            };
-          };
-
-          try {
-            const base = document.baseURI || window.location.href;
-            const parsedUrl = new URL(base);
-            const host = parsedUrl.hostname.replace(/^www\./, '').toLowerCase();
-
-            if (host.includes('gutenberg.org')) {
-              const result = extractGutenberg();
-              const idMatch = parsedUrl.pathname.match(/\/ebooks\/(\d+)|\/cache\/epub\/(\d+)/i);
-              return { ...result, source: host, sourceId: idMatch?.[1] || idMatch?.[2] || host, url: base };
-            }
-            if (host.includes('wattpad.com')) {
-              const result = extractWattpad();
-              return { ...result, source: host, sourceId: parsedUrl.pathname.match(/\/story\/(\d+)/i)?.[1] || host, url: base };
-            }
-            if (host.includes('archiveofourown.org')) {
-              const result = extractAO3();
-              return { ...result, source: host, sourceId: parsedUrl.pathname.match(/\/works\/(\d+)/i)?.[1] || host, url: base };
-            }
-            if (host.includes('openlibrary.org')) {
-              const result = extractOpenLibrary();
-              return { ...result, source: host, sourceId: parsedUrl.pathname.match(/\/books\/(OL\d+M)/i)?.[1] || host, url: base };
-            }
-
-            const description = document.querySelector('meta[name="description"]')?.content || '';
-            const author = document.querySelector('meta[name="author"]')?.content
-              || document.querySelector('[rel="author"]')?.textContent
-              || '';
-            const authorLink = document.querySelector('a[rel="author"]')?.href || '';
-            const title = document.querySelector('meta[property="og:title"]')?.content
-              || document.querySelector('h1')?.textContent
-              || document.title;
-            return {
-              title: cleanText(title),
-              author: cleanText(author),
-              authorUrl: authorLink,
-              source: host,
-              sourceId: host,
-              url: base,
-              summary: cleanText(description),
-            };
-          } catch (error) {
-            return { title: '', author: '', source: '', sourceId: '', url: String(window.location.href || ''), summary: '' };
-          }
-        })();
-        '''
 
         def _on_result(result):
             if not result:
@@ -453,7 +586,10 @@ class AcervoBrowser(QMainWindow):
                 print("Captured Metadata:")
                 print(json.dumps(metadata, indent=2, ensure_ascii=False))
 
-        view.page().runJavaScript(script, _on_result)
+        view.page().runJavaScript(
+            load_browser_script("save_metadata.js"),
+            _on_result,
+        )
 
     def closeEvent(self, event):
         """Clean up on close."""
@@ -463,38 +599,13 @@ class AcervoBrowser(QMainWindow):
 
 def main():
     """Main entry point."""
-    import argparse
-    
+
     app = QApplication(sys.argv)
     app.setApplicationName("Acervo Browser")
-    
-    parser = argparse.ArgumentParser(description="Acervo Browser - Web browser with metadata capture")
-    parser.add_argument(
-        "--url",
-        action="append",
-        help="URL to test; may be repeated and loaded sequentially after each capture",
-    )
-    parser.add_argument("--profile", default="acervo", help="Profile name for storage")
-    parser.add_argument(
-        "--test-batch",
-        action="store_true",
-        help="Mark items saved with 'Save from tab' so the test cleanup script can remove them",
-    )
-    parser.add_argument(
-        "--remove-test-imports",
-        action="store_true",
-        help="Open Literature and remove only items imported by the source-test scripts",
-    )
-    args = parser.parse_args()
-    
-    browser = AcervoBrowser(
-        profile_name=args.profile,
-        initial_urls=args.url,
-        test_batch=args.test_batch,
-        remove_test_imports=args.remove_test_imports,
-    )
+
+    browser = AcervoBrowser()
     browser.show()
-    
+
     sys.exit(app.exec())
 
 

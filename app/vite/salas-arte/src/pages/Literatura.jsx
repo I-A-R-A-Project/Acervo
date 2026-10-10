@@ -12,8 +12,6 @@ const SPINE_COLORS = ['forest', 'burgundy', 'navy', 'mustard', 'plum']
 const COLOR_VARS = { forest: 'var(--forest)', burgundy: 'var(--burgundy)', navy: 'var(--navy)', mustard: 'var(--mustard)', plum: 'var(--plum)' }
 
 const STORAGE_KEY = 'artvision-literatura-groups'
-const SCRIPT_IMPORT_BATCH = 'browser-test-script'
-const LEGACY_IMPORT_BATCH = 'books.txt-script'
 
 const EMPTY_GROUPS = [
   { id: 'poesia', label: 'Poetry', items: [] },
@@ -112,7 +110,6 @@ function mergeImportedBook(groups, entry) {
         ...preferred,
         id: item.id,
         tags: [...new Set([...(item.tags || []), ...(entry.tags || [])])],
-        importBatch: item.importBatch || preferred.importBatch,
       }
     }),
   }))
@@ -389,13 +386,12 @@ export default function Literatura() {
           titleUrl: payload.url,
           authorUrl: payload.authorUrl || '',
           medium: 'bookmark',
-          tags: ['bookmark', 'books.txt'],
+          tags: ['bookmark', 'multi-link-import'],
           license: 'unknown',
           source: `${source} — ${sourceId}`,
           saved: new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric' }),
           summary,
-          notes: summary || `Imported from books.txt: ${payload.url}`,
-          importBatch: SCRIPT_IMPORT_BATCH,
+          notes: summary || `Imported from link list: ${payload.url}`,
           capturedAt: new Date().toISOString(),
           metadataComplete: Boolean(payload.title && payload.author && summary),
         }
@@ -429,19 +425,8 @@ export default function Literatura() {
 
     const params = new URLSearchParams(window.location.search)
     const encodedUrls = params.get('import')
-    const removeImported = params.get('removeImported') === '1'
     const capturedMetadata = params.get('capture')
-
-    if (removeImported) {
-      updateGroups((prev) => prev.map((group) => ({
-        ...group,
-        items: group.items.filter((book) => (
-          book.importBatch !== SCRIPT_IMPORT_BATCH
-          && book.importBatch !== LEGACY_IMPORT_BATCH
-        )),
-      })))
-      return
-    }
+    const capturedBatch = params.get('captureBatch')
 
     if (capturedMetadata) {
       try {
@@ -466,7 +451,6 @@ export default function Literatura() {
           saved: new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric' }),
           summary,
           notes: summary || `Saved from Acervo Browser: ${metadata.url}`,
-          importBatch: params.get('testImport') === '1' ? SCRIPT_IMPORT_BATCH : undefined,
           capturedAt: new Date().toISOString(),
           metadataComplete: Boolean(metadata.title && metadata.author && summary),
         }
@@ -475,6 +459,53 @@ export default function Literatura() {
         window.history.replaceState(null, '', window.location.pathname)
       } catch (error) {
         console.error('Could not import captured browser metadata', error)
+      }
+      return
+    }
+
+    if (capturedBatch) {
+      try {
+        const metadataItems = JSON.parse(capturedBatch)
+        if (!Array.isArray(metadataItems)) return
+
+        const entries = metadataItems.flatMap((metadata) => {
+          if (!metadata || typeof metadata.url !== 'string') return []
+          try {
+            const parsedUrl = new URL(metadata.url)
+            if (!['http:', 'https:'].includes(parsedUrl.protocol)) return []
+
+            const source = metadata.source || parsedUrl.hostname.replace(/^www\./i, '')
+            const sourceId = metadata.sourceId || sourceIdForUrl(metadata.url)
+            const summary = String(metadata.summary || '').trim()
+            return [{
+              id: `browser-bookmark-${hashId(metadata.url)}`,
+              title: String(metadata.title || '').trim() || titleFromUrl(metadata.url),
+              artist: String(metadata.author || '').trim() || source,
+              sourceId,
+              titleUrl: metadata.url,
+              authorUrl: metadata.authorUrl || '',
+              medium: 'bookmark',
+              tags: ['bookmark', 'browser-capture'],
+              license: 'unknown',
+              source: `${source} — ${sourceId}`,
+              saved: new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric' }),
+              summary,
+              notes: summary || `Saved from Acervo Browser: ${metadata.url}`,
+              capturedAt: new Date().toISOString(),
+              metadataComplete: Boolean(metadata.title && metadata.author && summary),
+            }]
+          } catch {
+            return []
+          }
+        })
+
+        if (entries.length) {
+          updateGroups((prev) => entries.reduce((next, entry) => mergeImportedBook(next, entry), prev))
+          setActive('poesia')
+        }
+        window.history.replaceState(null, '', window.location.pathname)
+      } catch (error) {
+        console.error('Could not import captured browser metadata batch', error)
       }
       return
     }
@@ -503,20 +534,19 @@ export default function Literatura() {
       const parsed = new URL(url)
       const source = metadata?.source || parsed.hostname.replace(/^www\./i, '')
       return {
-        id: `script-bookmark-${hashId(url)}`,
+        id: `bulk-bookmark-${hashId(url)}`,
         title: metadata?.title || titleFromUrl(url),
         artist: metadata?.author || source,
         sourceId: metadata?.sourceId || sourceIdForUrl(url),
         titleUrl: url,
         authorUrl: metadata?.authorUrl || '',
         medium: 'bookmark',
-        tags: ['bookmark', 'books.txt'],
+        tags: ['bookmark', 'multi-link-import'],
         license: 'unknown',
         source: `${source} — ${metadata?.sourceId || sourceIdForUrl(url)}`,
         saved: new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric' }),
         summary: metadata?.summary || '',
-        notes: metadata?.summary || `Imported from books.txt: ${url}`,
-        importBatch: SCRIPT_IMPORT_BATCH,
+        notes: metadata?.summary || `Imported from link list: ${url}`,
         capturedAt: new Date().toISOString(),
         metadataComplete: Boolean(metadata?.title && metadata?.author && metadata?.summary),
       }

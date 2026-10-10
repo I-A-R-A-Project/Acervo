@@ -42,30 +42,21 @@ browser.
 Las salas y las páginas de Bandeja y Social usan datos de ejemplo; todavía no
 persisten en un backend.
 
-## Captura de URLs para Literatura
+## Importar y exportar enlaces
 
-Los extractores de Literatura cubren Open Library, Project Gutenberg, Wattpad
-y Archive of Our Own. Acervo Browser también puede capturar título, autor y
-descripción genéricos de la pestaña actual. Para probar fuentes, ejecutá desde
-la raíz del repositorio:
+En Acervo Browser, **Import** captura la página de la pestaña actual y la envía
+a Literatura. Mantené **Shift** al pulsarlo para abrir el diálogo de importación
+y exportación múltiple: pegá enlaces `http(s)` (uno por línea), o cargá/guardá
+la lista en un archivo de texto. **Exportar colección** guarda en un archivo
+JSON toda la colección guardada de Literatura, incluyendo grupos, metadatos,
+notas y etiquetas. **Exportar lista** guarda solo los enlaces escritos en el
+diálogo como texto plano. La importación agrega los enlaces al catálogo y
+extrae sus metadatos desde las páginas abiertas por el navegador, evitando
+las restricciones CORS que bloquean solicitudes directas desde la app web.
+Las fuentes candidatas y APIs están documentadas en [`docs/`](../docs/README.md).
 
-```bash
-python tests/add_books.py --url https://www.gutenberg.org/ebooks/2000
-python tests/add_books.py --file fuentes-a-probar.txt
-```
-
-El browser abre las URLs de a una; **Save from tab** guarda cada captura en
-Literatura y carga la siguiente. Las capturas de prueba se pueden quitar sin
-afectar el resto del catálogo, y el catálogo se puede exportar con:
-
-```bash
-python tests/remove_books.py
-python tests/dump_books.py
-```
-
-Cerrá Acervo Browser antes de ejecutar `dump_books.py`; no abras dos instancias
-simultáneas. Las fuentes candidatas y APIs están documentadas en
-[`docs/`](../docs/README.md).
+Los scripts JavaScript que se ejecutan en las páginas del navegador están en
+`browser_scripts/` y Acervo Browser los carga desde Python.
 
 ## Shell de escritorio
 
